@@ -152,13 +152,8 @@ export function stepKart(
 
   const away = kart.position.distanceTo(q.sample.position);
   const planar = Math.hypot(kart.position.x - q.sample.position.x, kart.position.z - q.sample.position.z);
-  // Only hard-snap when clearly lost — not folded-track nearest-sample noise.
-  if (
-    kart.invuln <= 0 &&
-    (kart.position.y < -2.5 ||
-      (Math.abs(q.lateral) > q.halfWidth + q.runoff + 5.5 && away > 10) ||
-      (away > 22 && planar > 24))
-  ) {
+  // Hard-snap only if fallen or absurdly far. Never mid-accel on a fold.
+  if (kart.invuln <= 0 && (kart.position.y < -2.5 || (away > 36 && planar > 36))) {
     snapToRibbon(kart, track);
     return;
   }
@@ -246,14 +241,14 @@ export function stepKart(
   FWD.set(Math.sin(kart.heading), 0, Math.cos(kart.heading));
   kart.position.addScaledVector(FWD, kart.speed * dt);
   if (onRunoff && !kart.airborne) {
-    kart.position.addScaledVector(q.right, -Math.sign(q.lateral) * 6.4 * dt);
+    kart.position.addScaledVector(q.right, -Math.sign(q.lateral) * 3.2 * dt);
   }
   if (offRibbon && !kart.airborne) {
-    kart.position.addScaledVector(q.right, -Math.sign(q.lateral) * 10 * dt);
+    kart.position.addScaledVector(q.right, -Math.sign(q.lateral) * 5.5 * dt);
   }
-  if (offRibbon && !q.sample.shortcut && kart.invuln <= 0) {
+  if (offRibbon && !q.sample.shortcut && kart.invuln <= 0 && Math.abs(kart.speed) < 2) {
     kart.recoverTimer += dt;
-    if (kart.recoverTimer > 2.8) {
+    if (kart.recoverTimer > 4) {
       snapToRibbon(kart, track);
       return;
     }
@@ -271,17 +266,20 @@ export function stepKart(
   const limit = q2.halfWidth + q2.runoff;
   const over = Math.abs(q2.lateral) - limit;
   if (over > 0) {
-    PUSH.copy(q2.right).multiplyScalar(-Math.sign(q2.lateral) * (over + 0.12));
+    // Cap the correction so a bad lateral never flings the kart to another ribbon.
+    const pushAmt = Math.min(over + 0.08, 1.6);
+    PUSH.copy(q2.right).multiplyScalar(-Math.sign(q2.lateral) * pushAmt);
     kart.position.add(PUSH);
     if (!kart.wallContact) {
-      kart.speed *= 0.78;
-      kart.heading += -Math.sign(q2.lateral) * 0.08;
-      kart.shake = Math.max(kart.shake, 0.2);
+      kart.speed *= 0.88;
+      kart.heading += -Math.sign(q2.lateral) * 0.05;
+      kart.shake = Math.max(kart.shake, 0.12);
       if (kart.drifting) kart.driftCharge *= 0.35;
     }
     kart.wallContact = true;
     kart.offTrackTimer += dt;
-    if (kart.invuln <= 0 && (over > 4.5 || kart.offTrackTimer > 2.6)) {
+    // Respawn only if stuck outside for a long time — not during accel stutter.
+    if (kart.invuln <= 0 && over > 6 && kart.offTrackTimer > 3.5) {
       snapToRibbon(kart, track);
       return;
     }
@@ -290,11 +288,10 @@ export function stepKart(
     kart.offTrackTimer = 0;
   }
 
-  // Stuck only when nearly stopped AND clearly off the ribbon for a while.
-  // Old 0.7s + speed<3.2 snapped mid-accel → forward/back teleports.
-  if (!kart.onAsphalt && !onRunoff && Math.abs(kart.speed) < 1.2) {
+  // Stuck only when fully stopped off-ribbon — never while accelerating.
+  if (!kart.onAsphalt && !onRunoff && Math.abs(kart.speed) < 0.35) {
     kart.stuckTimer += dt;
-    if (kart.stuckTimer > 1.6) {
+    if (kart.stuckTimer > 2.5) {
       snapToRibbon(kart, track);
       return;
     }
