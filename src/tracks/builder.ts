@@ -373,9 +373,25 @@ function queryApprox(samples: TrackSample[], progress: number): TrackSample {
   return best;
 }
 
-export function queryTrack(samples: TrackSample[], point: THREE.Vector3): TrackQuery {
+/** Progress distance on a closed [0,1) loop. */
+function wrapProgressDelta(a: number, b: number): number {
+  const d = Math.abs(a - b);
+  return Math.min(d, 1 - d);
+}
+
+/**
+ * Nearest ribbon sample. When preferProgress is set, heavily prefer samples
+ * near that progress so parallel/overlapping track folds cannot yank the kart
+ * forward/back (teleport stutter while accelerating).
+ */
+export function queryTrack(
+  samples: TrackSample[],
+  point: THREE.Vector3,
+  preferProgress: number | null = null,
+): TrackQuery {
   let bestI = 0;
   let bestScore = Infinity;
+  const hasPref = preferProgress != null && Number.isFinite(preferProgress);
   for (let i = 0; i < samples.length; i++) {
     const s = samples[i];
     const d = s.position.distanceToSquared(point);
@@ -383,7 +399,11 @@ export function queryTrack(samples: TrackSample[], point: THREE.Vector3): TrackQ
     const lat = Math.abs(rel.dot(s.binormal));
     const ribbon = lat < s.halfWidth + s.runoff + 0.6 ? 0 : 8;
     const shortcutPenalty = s.shortcut ? 2.5 : 0;
-    const score = d + ribbon + shortcutPenalty;
+    // ~progress units: 0.08 ≈ nearby; 0.35+ is a different stretch of a folded track.
+    const progPenalty = hasPref
+      ? wrapProgressDelta(preferProgress as number, s.progress) * 55
+      : 0;
+    const score = d + ribbon + shortcutPenalty + progPenalty;
     if (score < bestScore) {
       bestScore = score;
       bestI = i;
