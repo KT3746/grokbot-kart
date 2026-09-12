@@ -134,9 +134,17 @@ export function stepKart(
   const steerIn = stunned ? 0 : input.steer;
   const wantDrift = !stunned && input.drift;
 
-  const q = queryTrack(track.samples, kart.position);
+  const prefer = Number.isFinite(kart.progress) ? kart.progress : null;
+  const q = queryTrack(track.samples, kart.position, prefer);
   kart.sampleIndex = q.index;
-  kart.progress = q.progress;
+  if (prefer == null) {
+    kart.progress = q.progress;
+  } else {
+    const raw = Math.abs(q.progress - prefer);
+    const jump = Math.min(raw, 1 - raw);
+    // Accept normal forward motion; reject folded-track jumps (teleport stutter).
+    if (jump <= 0.14) kart.progress = q.progress;
+  }
   kart.lateral = q.lateral;
   kart.onAsphalt = q.surface === "asphalt" && Math.abs(q.lateral) < q.halfWidth;
   const onRunoff = Math.abs(q.lateral) > q.halfWidth && Math.abs(q.lateral) < q.halfWidth + q.runoff;
@@ -144,12 +152,12 @@ export function stepKart(
 
   const away = kart.position.distanceTo(q.sample.position);
   const planar = Math.hypot(kart.position.x - q.sample.position.x, kart.position.z - q.sample.position.z);
+  // Only hard-snap when clearly lost — not folded-track nearest-sample noise.
   if (
     kart.invuln <= 0 &&
-    (Math.abs(q.lateral) > q.halfWidth + q.runoff + 3.2 ||
-      kart.position.y < -2.5 ||
-      away > 14 ||
-      planar > 16)
+    (kart.position.y < -2.5 ||
+      (Math.abs(q.lateral) > q.halfWidth + q.runoff + 5.5 && away > 10) ||
+      (away > 22 && planar > 24))
   ) {
     snapToRibbon(kart, track);
     return;
@@ -243,18 +251,22 @@ export function stepKart(
   if (offRibbon && !kart.airborne) {
     kart.position.addScaledVector(q.right, -Math.sign(q.lateral) * 10 * dt);
   }
-  if (!kart.onAsphalt && !q.sample.shortcut && kart.invuln <= 0) {
+  if (offRibbon && !q.sample.shortcut && kart.invuln <= 0) {
     kart.recoverTimer += dt;
-    if (kart.recoverTimer > 2.2) {
+    if (kart.recoverTimer > 2.8) {
       snapToRibbon(kart, track);
       return;
     }
-  } else if (kart.onAsphalt || q.sample.shortcut) {
+  } else {
     kart.recoverTimer = 0;
   }
 
-  const q2 = queryTrack(track.samples, kart.position);
-  kart.progress = q2.progress;
+  const q2 = queryTrack(track.samples, kart.position, kart.progress);
+  {
+    const raw = Math.abs(q2.progress - kart.progress);
+    const jump = Math.min(raw, 1 - raw);
+    if (jump <= 0.14) kart.progress = q2.progress;
+  }
   kart.lateral = q2.lateral;
   const limit = q2.halfWidth + q2.runoff;
   const over = Math.abs(q2.lateral) - limit;
@@ -269,7 +281,7 @@ export function stepKart(
     }
     kart.wallContact = true;
     kart.offTrackTimer += dt;
-    if (kart.invuln <= 0 && (over > 3.2 || kart.offTrackTimer > 1.8)) {
+    if (kart.invuln <= 0 && (over > 4.5 || kart.offTrackTimer > 2.6)) {
       snapToRibbon(kart, track);
       return;
     }
@@ -278,9 +290,11 @@ export function stepKart(
     kart.offTrackTimer = 0;
   }
 
-  if (!kart.onAsphalt && Math.abs(kart.speed) < 3.2) {
+  // Stuck only when nearly stopped AND clearly off the ribbon for a while.
+  // Old 0.7s + speed<3.2 snapped mid-accel → forward/back teleports.
+  if (!kart.onAsphalt && !onRunoff && Math.abs(kart.speed) < 1.2) {
     kart.stuckTimer += dt;
-    if (kart.stuckTimer > 0.7) {
+    if (kart.stuckTimer > 1.6) {
       snapToRibbon(kart, track);
       return;
     }
