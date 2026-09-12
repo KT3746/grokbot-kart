@@ -31,8 +31,11 @@ function stayAboveRoad(point: THREE.Vector3, track: BuiltTrack, minHeight: numbe
   if (!Number.isFinite(q.lateral) || !isFiniteVec(q.right)) return;
   const limit = Math.max(2.4, q.halfWidth * 1.05);
   const over = Math.abs(q.lateral) - limit;
+  // Soft lateral nudge only — a hard yank used to park the lens on empty asphalt
+  // while the kart kept racing elsewhere ("camera me esqueceu").
   if (over > 0) {
-    point.addScaledVector(q.right, -Math.sign(q.lateral) * over);
+    const pull = Math.min(over, 2.8);
+    point.addScaledVector(q.right, -Math.sign(q.lateral) * pull);
   }
   if (Number.isFinite(q.height)) {
     point.y = Math.max(point.y, q.height + minHeight);
@@ -92,12 +95,13 @@ export class ChaseCamera {
     const boost = kart.boostTime > 0 ? 1 : 0;
     // Narrow neon alleys: sit higher/further so building faces never fill the lens.
     const narrow = !!(track && track.def && track.def.mood === "neon");
-    const back = (phone ? 12.6 : 10.6) + speed * 0.06 + (narrow ? 2.4 : 0);
-    const height = (phone ? 6.2 : 5.0) + speed * 0.01 + (narrow ? 2.2 : 0);
-    // Look at the kart, not the horizon. Phone pads cover the bottom ~180px,
-    // so the player has to sit higher in the frame than a desktop chase.
-    const ahead = (phone ? 3.8 : 5.2) + speed * 0.06;
-    const lookY = phone ? 0.55 : 0.62;
+    // Phone: closer + a bit lower so the kart sits above the touch pads.
+    const back = (phone ? 9.4 : 10.6) + speed * 0.05 + (narrow ? 2.0 : 0);
+    const height = (phone ? 4.6 : 5.0) + speed * 0.01 + (narrow ? 1.8 : 0);
+    // Aim near the kart body (not far down the ribbon) — empty-road framing
+    // hid the player under ACELERA/ITEM on portrait screens.
+    const ahead = (phone ? 1.1 : 4.2) + speed * 0.04;
+    const lookY = phone ? 0.95 : 0.62;
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
     const px = Number.isFinite(kart.position.x) ? kart.position.x : 0;
@@ -110,7 +114,7 @@ export class ChaseCamera {
     const backZ = -cos;
 
     this.desired.set(px + backX * back, py + height, pz + backZ * back);
-    if (track) stayAboveRoad(this.desired, track, phone ? (narrow ? 7.4 : 6.0) : (narrow ? 6.2 : 4.8));
+    if (track) stayAboveRoad(this.desired, track, phone ? (narrow ? 5.6 : 4.2) : (narrow ? 6.2 : 4.8));
 
     LOOK_TARGET.set(px + sin * ahead, py + lookY, pz + cos * ahead);
 
@@ -129,14 +133,23 @@ export class ChaseCamera {
       this.look.z = damp(this.look.z, LOOK_TARGET.z, 7.2, dt);
     }
 
-    const minDist = phone ? 12.2 : 10.2;
+    const minDist = phone ? 8.6 : 10.2;
     const dx = camera.position.x - px;
     const dy = camera.position.y - py;
     const dz = camera.position.z - pz;
     if (!isFiniteVec(camera.position) || dx * dx + dy * dy + dz * dz < minDist * minDist) {
       camera.position.copy(this.desired);
     }
-    if (track) stayAboveRoad(camera.position, track, phone ? (narrow ? 7.4 : 6.0) : (narrow ? 6.2 : 4.8));
+    if (track) stayAboveRoad(camera.position, track, phone ? (narrow ? 5.6 : 4.2) : (narrow ? 6.2 : 4.8));
+
+    // If road correction dragged us off the chase cone, snap back so we never
+    // stare at empty asphalt while the player is elsewhere.
+    const driftX = camera.position.x - this.desired.x;
+    const driftZ = camera.position.z - this.desired.z;
+    if (driftX * driftX + driftZ * driftZ > 16) {
+      camera.position.copy(this.desired);
+      this.look.copy(LOOK_TARGET);
+    }
 
     if (!isFiniteVec(this.look) || camera.position.distanceToSquared(this.look) < 0.25) {
       this.look.set(px + sin * 8, py + lookY, pz + cos * 8);
