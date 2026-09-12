@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { clamp, damp } from "../config";
+import { clamp, damp, viewSize } from "../config";
 import type { KartBody } from "../physics/kart";
 import { queryTrack } from "../tracks/builder";
 import type { BuiltTrack } from "../tracks/types";
@@ -95,13 +95,12 @@ export class ChaseCamera {
     const boost = kart.boostTime > 0 ? 1 : 0;
     // Narrow neon alleys: sit higher/further so building faces never fill the lens.
     const narrow = !!(track && track.def && track.def.mood === "neon");
-    // Phone: closer + a bit lower so the kart sits above the touch pads.
-    const back = (phone ? 9.4 : 10.6) + speed * 0.05 + (narrow ? 2.0 : 0);
-    const height = (phone ? 4.6 : 5.0) + speed * 0.01 + (narrow ? 1.8 : 0);
-    // Aim near the kart body (not far down the ribbon) — empty-road framing
-    // hid the player under ACELERA/ITEM on portrait screens.
-    const ahead = (phone ? 1.1 : 4.2) + speed * 0.04;
-    const lookY = phone ? 0.95 : 0.62;
+    // Phone: close chase that keeps the kart above the touch pads.
+    const back = (phone ? 8.2 : 10.6) + speed * 0.05 + (narrow ? 2.0 : 0);
+    const height = (phone ? 4.2 : 5.0) + speed * 0.01 + (narrow ? 1.8 : 0);
+    // Look AT the kart (tiny look-ahead), never at empty asphalt far ahead.
+    const ahead = (phone ? 0.35 : 4.2) + speed * 0.03;
+    const lookY = phone ? 1.05 : 0.62;
     const sin = Math.sin(heading);
     const cos = Math.cos(heading);
     const px = Number.isFinite(kart.position.x) ? kart.position.x : 0;
@@ -133,7 +132,7 @@ export class ChaseCamera {
       this.look.z = damp(this.look.z, LOOK_TARGET.z, 7.2, dt);
     }
 
-    const minDist = phone ? 8.6 : 10.2;
+    const minDist = phone ? 7.2 : 10.2;
     const dx = camera.position.x - px;
     const dy = camera.position.y - py;
     const dz = camera.position.z - pz;
@@ -152,14 +151,15 @@ export class ChaseCamera {
     }
 
     if (!isFiniteVec(this.look) || camera.position.distanceToSquared(this.look) < 0.25) {
-      this.look.set(px + sin * 8, py + lookY, pz + cos * 8);
+      this.look.set(px + sin * ahead, py + lookY, pz + cos * ahead);
     }
 
     VIEW.copy(this.look).sub(camera.position);
     const horiz = VIEW.x * VIEW.x + VIEW.z * VIEW.z;
     if (horiz < 0.04) {
-      this.look.x = camera.position.x + sin * 8;
-      this.look.z = camera.position.z + cos * 8;
+      this.look.x = px + sin * Math.max(2.5, ahead + 2);
+      this.look.z = pz + cos * Math.max(2.5, ahead + 2);
+      this.look.y = py + lookY;
     }
 
     camera.up.set(0, 1, 0);
@@ -168,7 +168,7 @@ export class ChaseCamera {
     if (!matrixIsFinite(camera.matrix) || !isFiniteVec(camera.position)) {
       camera.position.set(px + backX * back, py + height, pz + backZ * back);
       camera.up.set(0, 1, 0);
-      camera.lookAt(px + sin * 8, py + lookY, pz + cos * 8);
+      camera.lookAt(px + sin * Math.max(2.5, ahead + 2), py + lookY, pz + cos * Math.max(2.5, ahead + 2));
       if (!matrixIsFinite(camera.matrix)) {
         camera.quaternion.identity();
         camera.rotation.set(0, heading, 0);
@@ -189,9 +189,10 @@ export class ChaseCamera {
     }
     camera.near = RACE_NEAR;
     camera.far = RACE_FAR;
-    const w = typeof window !== "undefined" ? Math.max(1, window.innerWidth) : 1280;
-    const h = typeof window !== "undefined" ? Math.max(1, window.innerHeight) : 720;
-    camera.aspect = w / h;
+    // Match Game.viewSize (visualViewport) — innerWidth alone skews phone framing
+    // and made the chase look like it "forgot" the kart.
+    const { w, h } = viewSize();
+    camera.aspect = w / Math.max(1, h);
     camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
