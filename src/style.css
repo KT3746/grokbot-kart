@@ -1013,7 +1013,7 @@ body.is-race.touch-on .touch {
   }
 
   body.touch-on.is-race .hud-bot {
-    bottom: calc(176px + var(--safe-b));
+    bottom: calc(96px + var(--safe-b));
   }
 }
 
