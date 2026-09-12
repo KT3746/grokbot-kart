@@ -389,26 +389,41 @@ export function queryTrack(
   point: THREE.Vector3,
   preferProgress: number | null = null,
 ): TrackQuery {
-  let bestI = 0;
-  let bestScore = Infinity;
   const hasPref = preferProgress != null && Number.isFinite(preferProgress);
-  for (let i = 0; i < samples.length; i++) {
-    const s = samples[i];
-    const d = s.position.distanceToSquared(point);
-    const rel = TMP.copy(point).sub(s.position);
-    const lat = Math.abs(rel.dot(s.binormal));
-    const ribbon = lat < s.halfWidth + s.runoff + 0.6 ? 0 : 8;
-    const shortcutPenalty = s.shortcut ? 2.5 : 0;
-    // ~progress units: 0.08 ≈ nearby; 0.35+ is a different stretch of a folded track.
-    const progPenalty = hasPref
-      ? wrapProgressDelta(preferProgress as number, s.progress) * 55
-      : 0;
-    const score = d + ribbon + shortcutPenalty + progPenalty;
-    if (score < bestScore) {
-      bestScore = score;
-      bestI = i;
+  const pref = hasPref ? (preferProgress as number) : 0;
+
+  const pick = (maxJump: number | null): number => {
+    let bestI = 0;
+    let bestScore = Infinity;
+    let found = false;
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      if (maxJump != null && wrapProgressDelta(pref, s.progress) > maxJump) continue;
+      const d = s.position.distanceToSquared(point);
+      const rel = TMP.copy(point).sub(s.position);
+      const lat = Math.abs(rel.dot(s.binormal));
+      const ribbon = lat < s.halfWidth + s.runoff + 0.6 ? 0 : 8;
+      const shortcutPenalty = s.shortcut ? 2.5 : 0;
+      const progPenalty = hasPref ? wrapProgressDelta(pref, s.progress) * 40 : 0;
+      const score = d + ribbon + shortcutPenalty + progPenalty;
+      if (score < bestScore) {
+        bestScore = score;
+        bestI = i;
+        found = true;
+      }
     }
+    return found ? bestI : -1;
+  };
+
+  // Hard window first: never pick a parallel fold far along the lap.
+  let bestI = -1;
+  if (hasPref) {
+    bestI = pick(0.08);
+    if (bestI < 0) bestI = pick(0.16);
+    if (bestI < 0) bestI = pick(0.28);
   }
+  if (bestI < 0) bestI = pick(null);
+  if (bestI < 0) bestI = 0;
   const sample = samples[bestI];
   const rel = TMP.copy(point).sub(sample.position);
   const lateral = rel.dot(sample.binormal);
