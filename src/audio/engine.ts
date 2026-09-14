@@ -164,9 +164,15 @@ export class AudioEngine {
   }
 
   finish(): void {
-    this.blip(392, 0.16, "sine");
-    setTimeout(() => this.blip(494, 0.16, "sine"), 140);
-    setTimeout(() => this.blip(588, 0.28, "sine"), 280);
+    this.blip(392, 0.14, "sine");
+    setTimeout(() => this.blip(494, 0.14, "sine"), 110);
+    setTimeout(() => this.blip(587, 0.14, "sine"), 220);
+    setTimeout(() => this.blip(784, 0.32, "triangle"), 340);
+  }
+
+  lap(): void {
+    this.blip(440, 0.08, "sine");
+    setTimeout(() => this.blip(660, 0.12, "triangle"), 70);
   }
 
   countdown(n: number): void {
