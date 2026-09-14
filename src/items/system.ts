@@ -103,11 +103,11 @@ export class ItemSystem {
     racer.item = null;
     const kart = racer.kart;
     if (id === "turbo") {
-      kart.boostTime = Math.max(kart.boostTime, 1.85);
+      kart.boostTime = Math.max(kart.boostTime, 2.15);
       return;
     }
     if (id === "hook") {
-      kart.magnetTime = 4.2;
+      kart.magnetTime = 5.0;
       return;
     }
     if (id === "soap") {
@@ -139,7 +139,7 @@ export class ItemSystem {
       );
       mesh.position.copy(p).add(new THREE.Vector3(0, 0.8, 0));
       this.group.add(mesh);
-      this.soots.push({ mesh, position: p, life: 4.2, owner: racer.id });
+      this.soots.push({ mesh, position: p, life: 5.0, owner: racer.id });
       return;
     }
     if (id === "puck") {
@@ -196,7 +196,7 @@ export class ItemSystem {
     for (const puck of this.pucks) {
       if (puck.spent) continue;
       puck.life -= dt;
-      puck.progress = (puck.progress + dt * 0.22) % 1;
+      puck.progress = (puck.progress + dt * 0.26) % 1;
       let best = track.samples[0];
       let bestD = 1;
       for (const s of track.samples) {
