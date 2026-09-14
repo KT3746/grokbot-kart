@@ -98,6 +98,25 @@ export class Effects {
     this.puffs = this.puffs.filter((p) => p.life > 0);
   }
 
+  spawnLapBurst(kart: KartBody): void {
+    const colors = [0xffe27a, 0x7dff9a, 0x7ad7ff, 0xff6ad5];
+    for (let i = 0; i < 10; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: colors[i % colors.length],
+        transparent: true,
+        opacity: 0.95,
+      });
+      const spark = new THREE.Mesh(this.sparkGeo, mat);
+      const ang = (i / 10) * Math.PI * 2;
+      spark.position.copy(kart.position);
+      spark.position.x += Math.cos(ang) * 0.55;
+      spark.position.z += Math.sin(ang) * 0.55;
+      spark.position.y += 0.4;
+      this.group.add(spark);
+      this.puffs.push({ mesh: spark, life: 0.45, rise: 2.8, grow: 3.5 });
+    }
+  }
+
   clear(): void {
     this.group.clear();
     this.marks = [];

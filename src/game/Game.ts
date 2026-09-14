@@ -27,6 +27,8 @@ export class Game {
   kartId: KartId = "cometa";
   trackId: TrackId = "orla";
   race: Race | null = null;
+  private lastHudLap = -1;
+  private lastPlace = 0;
   cup = new Championship();
   muted = false;
   private menuScene = new THREE.Scene();
@@ -361,6 +363,8 @@ export class Game {
     const lapsRaw = Number(params.get("laps"));
     const laps = Number.isFinite(lapsRaw) && lapsRaw > 0 && lapsRaw < 8 ? lapsRaw : undefined;
     const autoDrive = params.get("auto") === "1";
+    this.lastHudLap = -1;
+    this.lastPlace = 0;
     this.race = new Race(this.trackId, this.kartId, isMobileViewport() || this.perf.low, laps, autoDrive);
     this.race.attachCamera(this.camera);
     this.race.onCue = (kind) => {
@@ -467,6 +471,19 @@ export class Game {
         smoke: p.kart.smokeTime > 0,
         boost: p.kart.boostTime > 0,
       });
+      if (p.kart.lap > this.lastHudLap) {
+        if (this.lastHudLap >= 0 && p.kart.lap < this.race.laps) {
+          this.audio.lap();
+          this.ui.banner(`VOLTA ${p.kart.lap + 1}/${this.race.laps}`, 900);
+          this.race.fx.spawnLapBurst(p.kart);
+        }
+        this.lastHudLap = p.kart.lap;
+      }
+      if (this.lastPlace && p.place < this.lastPlace) {
+        this.ui.banner(p.place === 1 ? "LIDERANÇA!" : `SOBE PRA P${p.place}!`, 700);
+        this.audio.blip(520, 0.1, "triangle");
+      }
+      this.lastPlace = p.place;
       this.ui.drawMinimap(
         this.race.minimapPoints(),
         this.race.racers.map((r) => ({

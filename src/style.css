@@ -1037,3 +1037,37 @@ body.is-race.touch-on .touch {
     font-size: 11px;
   }
 }
+
+
+/* fun2 polish */
+.screen h1, .title-mark {
+  text-shadow: 0 0 22px rgba(255, 200, 80, 0.35), 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.pos {
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+body.is-race .pos {
+  text-shadow: 0 0 12px rgba(255, 220, 120, 0.25);
+}
+
+.banner {
+  font-size: clamp(18px, 4.2vw, 26px);
+  letter-spacing: 0.16em;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(8, 10, 16, 0.45);
+  border: 1px solid rgba(255, 210, 90, 0.28);
+}
+
+.card.selected, .card:active {
+  box-shadow: 0 0 0 2px rgba(255, 200, 80, 0.55), 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.pad-btn.accel {
+  box-shadow:
+    0 0 0 3px rgba(40, 220, 100, 0.3),
+    0 6px 16px rgba(0, 0, 0, 0.45),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.28),
+    inset 0 4px 8px rgba(255, 255, 255, 0.35);
+}
