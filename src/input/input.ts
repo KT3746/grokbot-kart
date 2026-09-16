@@ -184,14 +184,16 @@ export class Input {
     const up = k.has("ArrowUp") || k.has("KeyW");
     const left = k.has("ArrowLeft") || k.has("KeyA");
     const right = k.has("ArrowRight") || k.has("KeyD");
-    // Drift/brake buttons removed — coast when throttle is released.
+    // Coast when throttle is released. Drift = Shift (PC) or Derrapa pad (touch).
     const fromKeys = keyPlayerRight(left, right);
     const stickLive = this.steerPointer !== null;
     const playerRight = fromKeys !== 0 ? fromKeys : stickLive ? this.steerTouch : 0;
+    const shift =
+      k.has("ShiftLeft") || k.has("ShiftRight") || k.has("Space");
     this.state.throttle = this.pad.throttle || up ? 1 : 0;
     this.state.brake = 0;
     this.state.steer = steerFromPlayerRight(playerRight);
-    this.state.drift = false;
+    this.state.drift = this.pad.drift || shift;
     this.state.item = this.itemPressed;
     return this.state;
   }
