@@ -6,7 +6,8 @@ import { Input } from "../input/input";
 import { applyLowPerfScene, forcedLowPerf, PerfMonitor } from "../perf";
 import { Championship } from "../race/championship";
 import { Race } from "../race/race";
-import type { GameMode, KartId, TrackId } from "../types";
+import type { GameMode, ItemId, KartId, TrackId } from "../types";
+import { ITEM_LABEL } from "../items/system";
 import { UI } from "../ui/dom";
 import { createKartMesh } from "../karts/mesh";
 import { getKart } from "../karts/roster";
@@ -29,6 +30,7 @@ export class Game {
   race: Race | null = null;
   private lastHudLap = -1;
   private lastPlace = 0;
+  private lastHudItem: ItemId | null | undefined = undefined;
   cup = new Championship();
   muted = false;
   private menuScene = new THREE.Scene();
@@ -364,6 +366,7 @@ export class Game {
     const laps = Number.isFinite(lapsRaw) && lapsRaw > 0 && lapsRaw < 8 ? lapsRaw : undefined;
     const autoDrive = params.get("auto") === "1";
     this.lastHudLap = -1;
+    this.lastHudItem = undefined;
     this.lastPlace = 0;
     this.race = new Race(this.trackId, this.kartId, isMobileViewport() || this.perf.low, laps, autoDrive);
     this.race.attachCamera(this.camera);
@@ -471,6 +474,10 @@ export class Game {
         smoke: p.kart.smokeTime > 0,
         boost: p.kart.boostTime > 0,
       });
+      if (p.item && p.item !== this.lastHudItem) {
+        this.ui.banner(ITEM_LABEL[p.item], 650);
+      }
+      this.lastHudItem = p.item;
       if (p.kart.lap > this.lastHudLap) {
         if (this.lastHudLap >= 0 && p.kart.lap < this.race.laps) {
           this.audio.lap();
