@@ -216,12 +216,13 @@ export function stepKart(
   if (wantDrift && Math.abs(kart.speed) > 9 && Math.abs(steerIn) > 0.15 && !kart.airborne) {
     if (!kart.drifting) kart.driftDir = Math.sign(steerIn) || kart.driftDir || 1;
     kart.drifting = true;
-    kart.driftCharge += dt * (0.55 + stats.drift * 0.85) * (0.65 + Math.abs(steerIn) * 0.5);
+    // fun4: slightly faster charge so a clean hold feels rewarding without runaway turbo
+    kart.driftCharge += dt * (0.62 + stats.drift * 0.9) * (0.68 + Math.abs(steerIn) * 0.5);
     steer += kart.driftDir * (0.28 + stats.drift * 0.18);
     kart.speed *= Math.exp(-0.07 * dt);
   } else if (kart.drifting) {
-    if (kart.driftCharge > 0.4 && kart.slipTime <= 0) {
-      kart.boostTime = Math.min(1.85, 0.55 + kart.driftCharge * 0.85 * stats.drift);
+    if (kart.driftCharge > 0.38 && kart.slipTime <= 0) {
+      kart.boostTime = Math.min(2.05, 0.62 + kart.driftCharge * 0.92 * stats.drift);
     }
     kart.drifting = false;
     kart.driftCharge = 0;
