@@ -124,12 +124,13 @@ export class ChaseCamera {
       camera.position.copy(this.desired);
       this.look.copy(LOOK_TARGET);
     } else {
-      camera.position.x = damp(camera.position.x, this.desired.x, 6.4, dt);
-      camera.position.y = damp(camera.position.y, this.desired.y, 5.6, dt);
-      camera.position.z = damp(camera.position.z, this.desired.z, 6.4, dt);
-      this.look.x = damp(this.look.x, LOOK_TARGET.x, 7.2, dt);
-      this.look.y = damp(this.look.y, LOOK_TARGET.y, 7.2, dt);
-      this.look.z = damp(this.look.z, LOOK_TARGET.z, 7.2, dt);
+      // fun4: slightly snappier damp — still soft enough for phone framing
+      camera.position.x = damp(camera.position.x, this.desired.x, 7.1, dt);
+      camera.position.y = damp(camera.position.y, this.desired.y, 6.2, dt);
+      camera.position.z = damp(camera.position.z, this.desired.z, 7.1, dt);
+      this.look.x = damp(this.look.x, LOOK_TARGET.x, 8.0, dt);
+      this.look.y = damp(this.look.y, LOOK_TARGET.y, 8.0, dt);
+      this.look.z = damp(this.look.z, LOOK_TARGET.z, 8.0, dt);
     }
 
     const minDist = phone ? 7.2 : 10.2;
@@ -176,12 +177,15 @@ export class ChaseCamera {
       }
     }
 
-    const wantFov = (phone ? 50 : 48) + speed * 0.22 + boost * 7;
-    this.fov = snap ? wantFov : damp(this.fov, wantFov, 4.2, dt);
+    // fun4: a bit more FOV punch on boost; damp stays tame for phone
+    const wantFov = (phone ? 50 : 48) + speed * 0.22 + boost * 9;
+    this.fov = snap ? wantFov : damp(this.fov, wantFov, 5.0, dt);
     if (!Number.isFinite(this.fov)) this.fov = 50;
     camera.fov = clamp(this.fov, 42, 72);
     // Light punch when the kart shakes (hits / walls / landings).
-    if (kart.shake > 0 && !snap) {
+    const reduceMotion =
+      typeof document !== "undefined" && document.body.classList.contains("reduce-motion");
+    if (kart.shake > 0 && !snap && !reduceMotion) {
       const punch = Math.min(0.22, kart.shake) * 0.55;
       camera.position.x += (Math.random() - 0.5) * punch;
       camera.position.y += (Math.random() - 0.5) * punch * 0.6;
