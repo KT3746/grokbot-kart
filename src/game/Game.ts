@@ -228,6 +228,7 @@ export class Game {
     // Wide desktop: never bind pads — leftover stick used to steal Arrow keys
     // and CSS used to force #touch visible even without touch-on.
     if (!wantsTouchControls()) {
+      // Idempotent: must not wipe keyboard one-shots (see Input.releaseTouch).
       this.input.releaseTouch();
       touch.style.removeProperty("display");
       touch.style.removeProperty("visibility");
