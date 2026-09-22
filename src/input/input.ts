@@ -48,8 +48,19 @@ export class Input {
       this.keys.add(e.code);
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault();
       if (e.repeat) return;
-      if (e.code === "Escape") this.pausePressed = true;
-      if (e.code === "KeyE" || e.code === "ControlLeft" || e.code === "ControlRight") this.itemPressed = true;
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (e.code === "Escape" || e.code === "KeyP" || key === "Escape" || key === "p") {
+        this.pausePressed = true;
+      }
+      if (
+        e.code === "KeyE" ||
+        e.code === "ControlLeft" ||
+        e.code === "ControlRight" ||
+        key === "e" ||
+        key === "Control"
+      ) {
+        this.itemPressed = true;
+      }
     };
     const up = (e: KeyboardEvent) => this.keys.delete(e.code);
     window.addEventListener("keydown", down, { passive: false });
@@ -172,10 +183,27 @@ export class Input {
     this.touchMode = wantsTouchControls();
   }
 
-  /** Drop the race pad layer so menu clicks are not captured by leftover sticks. */
+  /** Drop the race pad layer so menu clicks are not captured by leftover sticks.
+   *  Do NOT call resetPlay() — on desktop ensureTouchLayer runs every frame and
+   *  would wipe KeyE / Escape one-shots before consumeItem/consumePause. */
   releaseTouch(): void {
+    if (this.boundLayer == null && this.steerPointer == null && this.padPointers.size === 0) {
+      this.touchMode = wantsTouchControls();
+      return;
+    }
     this.boundLayer = null;
-    this.resetPlay();
+    this.pad.throttle = false;
+    this.pad.brake = false;
+    this.pad.drift = false;
+    this.pad.item = false;
+    this.steerTouch = 0;
+    this.padPointers.clear();
+    this.steerPointer = null;
+    this.state.throttle = 0;
+    this.state.brake = 0;
+    this.state.steer = 0;
+    this.state.drift = false;
+    this.state.item = false;
     this.touchMode = wantsTouchControls();
   }
 
