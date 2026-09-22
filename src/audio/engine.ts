@@ -184,12 +184,16 @@ export class AudioEngine {
   }
 
   item(): void {
-    this.blip(480, 0.07, "sine");
-    setTimeout(() => this.blip(640, 0.09, "sine"), 70);
+    // fun4: brighter pickup / use chime
+    this.blip(520, 0.08, "sine");
+    setTimeout(() => this.blip(700, 0.1, "triangle"), 60);
+    setTimeout(() => this.blip(880, 0.08, "sine"), 120);
   }
 
   hit(): void {
-    this.blip(70, 0.16, "triangle");
+    // fun4: heavier thud so hits read on speakers/phone
+    this.blip(62, 0.2, "triangle");
+    setTimeout(() => this.blip(110, 0.12, "sine"), 40);
   }
 
   pauseHum(on: boolean): void {

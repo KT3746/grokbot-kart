@@ -15,7 +15,7 @@ export class Effects {
   spawnDrift(kart: KartBody): void {
     if (!kart.drifting && kart.boostTime <= 0) return;
     const boosting = kart.boostTime > 0;
-    if (Math.random() > (boosting ? 0.22 : 0.45)) return;
+    if (Math.random() > (boosting ? 0.16 : 0.42)) return;
     const back = new THREE.Vector3(-Math.sin(kart.heading), 0, -Math.cos(kart.heading));
     const side = new THREE.Vector3(Math.cos(kart.heading), 0, -Math.sin(kart.heading));
 
@@ -62,22 +62,43 @@ export class Effects {
 
   /** Burst when hit by an item — quick colorful pop. */
   spawnHit(kart: KartBody): void {
-    const colors = [0xff5a2a, 0xffe27a, 0x7ad7ff, 0xff6ad5];
-    for (let i = 0; i < 8; i++) {
+    const colors = [0xff5a2a, 0xffe27a, 0x7ad7ff, 0xff6ad5, 0xffffff];
+    for (let i = 0; i < 12; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: colors[i % colors.length],
+        transparent: true,
+        opacity: 0.98,
+      });
+      const spark = new THREE.Mesh(this.sparkGeo, mat);
+      const ang = (i / 12) * Math.PI * 2;
+      spark.position.copy(kart.position);
+      spark.position.x += Math.cos(ang) * 0.55;
+      spark.position.z += Math.sin(ang) * 0.55;
+      spark.position.y += 0.55;
+      spark.scale.setScalar(1.05);
+      this.group.add(spark);
+      this.puffs.push({ mesh: spark, life: 0.42, rise: 4.2, grow: 4.6 });
+    }
+  }
+
+  /** Short sparkle when the player fires an item (fun4 juice). */
+  spawnUse(kart: KartBody): void {
+    const colors = [0xffe27a, 0x7ad7ff, 0x7dff9a];
+    for (let i = 0; i < 6; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: colors[i % colors.length],
         transparent: true,
         opacity: 0.95,
       });
       const spark = new THREE.Mesh(this.sparkGeo, mat);
-      const ang = (i / 8) * Math.PI * 2;
+      const ang = (i / 6) * Math.PI * 2;
       spark.position.copy(kart.position);
-      spark.position.x += Math.cos(ang) * 0.4;
-      spark.position.z += Math.sin(ang) * 0.4;
-      spark.position.y += 0.5;
-      spark.scale.setScalar(0.9);
+      spark.position.x += Math.cos(ang) * 0.35;
+      spark.position.z += Math.sin(ang) * 0.35;
+      spark.position.y += 0.7;
+      spark.scale.setScalar(0.75);
       this.group.add(spark);
-      this.puffs.push({ mesh: spark, life: 0.35, rise: 3.5, grow: 4.0 });
+      this.puffs.push({ mesh: spark, life: 0.28, rise: 2.6, grow: 3.2 });
     }
   }
 

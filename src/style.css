@@ -514,7 +514,10 @@ h2 {
   font-family: var(--font-display);
   font-size: clamp(32px, 6vw, 56px);
   line-height: 0.82;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  /* fun4: stronger silhouette for bright tracks */
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    0 2px 14px rgba(0, 0, 0, 0.7);
 }
 
 .pos small {
@@ -528,11 +531,12 @@ h2 {
 .lap-box,
 .speed-box,
 .item-slot {
-  background: rgba(10, 12, 16, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 10, 14, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   padding: 6px 10px;
   min-width: 72px;
   backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
 .kicker {
@@ -602,6 +606,7 @@ body:not(.is-race) .hud,
 body:not(.is-race) .touch,
 body:not(.is-race) .countdown,
 body:not(.is-race) .banner,
+body:not(.is-race) .race-tip,
 body:not(.is-race) .soot-veil,
 body:not(.is-race) .pause-btn {
   display: none !important;
@@ -1096,3 +1101,60 @@ body.is-race .pos {
   35% { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(255, 210, 90, 0.45); }
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 210, 90, 0.0); }
 }
+
+
+/* === fun4 polish: onboarding tip + a11y motion + HUD readability === */
+.race-tip {
+  position: absolute;
+  left: 50%;
+  bottom: max(118px, calc(14% + var(--safe-b)));
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(8, 10, 16, 0.72);
+  border: 1px solid rgba(255, 210, 90, 0.35);
+  color: #f2e6c4;
+  font-family: var(--font-ui, var(--font-display), system-ui, sans-serif);
+  font-size: clamp(13px, 3.4vw, 15px);
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body.touch-on.is-race .race-tip {
+  bottom: calc(188px + var(--safe-b));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner.pop,
+  .countdown.pop,
+  .item-slot.armed,
+  .item-slot.flash {
+    animation: none !important;
+  }
+  .speedlines {
+    animation: none !important;
+    opacity: 0.2;
+    mix-blend-mode: normal;
+  }
+}
+
+body.reduce-motion .banner.pop,
+body.reduce-motion .countdown.pop,
+body.reduce-motion .item-slot.armed,
+body.reduce-motion .item-slot.flash {
+  animation: none !important;
+}
+
+body.reduce-motion .speedlines {
+  animation: none !important;
+  opacity: 0.2;
+  mix-blend-mode: normal;
+}
+
+/* fun4-marker: Segure Derrapa (ou Shift) nas curvas pra turbo */

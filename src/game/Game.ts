@@ -31,6 +31,7 @@ export class Game {
   private lastHudLap = -1;
   private lastPlace = 0;
   private lastHudItem: ItemId | null | undefined = undefined;
+  private tipArmed = false;
   cup = new Championship();
   muted = false;
   private menuScene = new THREE.Scene();
@@ -92,7 +93,15 @@ export class Game {
     window.addEventListener("pointerdown", unlock);
     window.addEventListener("keydown", unlock);
     if (forcedLowPerf()) this.enterLowPerf();
+    this.syncReducedMotion();
     (window as unknown as { pista: Game }).pista = this;
+  }
+
+  private syncReducedMotion(): void {
+    const reduce =
+      typeof window !== "undefined" &&
+      !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    document.body.classList.toggle("reduce-motion", reduce);
   }
 
   start(): void {
@@ -379,16 +388,22 @@ export class Game {
         this.ui.banner("LARGADA!", 700);
         setTimeout(() => this.ui.setCountdown(null), 780);
       }
-      if (kind === "item") this.audio.item();
+      if (kind === "item") {
+        this.audio.item();
+        this.race?.fx.spawnUse(this.race.player.kart);
+        if (navigator.vibrate) navigator.vibrate(10);
+      }
       if (kind === "hit") {
         this.audio.hit();
         this.race?.fx.spawnHit(this.race.player.kart);
-        if (navigator.vibrate) navigator.vibrate([18, 30, 18]);
+        this.ui.banner("ACERTO!", 480);
+        if (navigator.vibrate) navigator.vibrate([22, 28, 22]);
       }
       if (kind === "boost") {
         this.audio.whoosh();
-        this.ui.banner("TURBO!", 520);
-        if (navigator.vibrate) navigator.vibrate(12);
+        this.ui.banner("TURBO!", 560);
+        this.race?.fx.spawnUse(this.race.player.kart);
+        if (navigator.vibrate) navigator.vibrate(14);
       }
       if (kind === "respawn") this.ui.banner("DE VOLTA À PISTA", 900);
       if (kind === "finish") {
@@ -406,6 +421,8 @@ export class Game {
     };
     this.view = "race";
     this.ui.raceHud(true);
+    this.tipArmed = true;
+    this.ui.showRaceTip(7200);
     this.syncChrome();
     this.audio.countdown(3);
     if (this.perf.low) this.race.applyLowPerf();
@@ -439,6 +456,8 @@ export class Game {
     this.race?.dispose();
     this.race = null;
     this.audio.silence();
+    this.tipArmed = false;
+    this.ui.hideRaceTip();
     this.input.setRaceLock(false);
     this.input.releaseTouch();
     this.camera.clearViewOffset();
@@ -463,6 +482,10 @@ export class Game {
     if (this.view === "race" && this.race) {
       this.ensureTouchLayer();
       if (this.input.consumePause()) this.togglePause();
+      if (this.tipArmed && this.ui.isRaceTipVisible() && this.input.state.throttle > 0.4) {
+        this.ui.hideRaceTip();
+        this.tipArmed = false;
+      }
       this.race.update(dt, this.input, this.camera);
       const p = this.race.player;
       this.ui.updateHud({
