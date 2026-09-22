@@ -31,6 +31,8 @@ export class UI {
   private press: { pointerId: number; x: number; y: number; el: HTMLElement } | null = null;
   private lastFire = 0;
   private bannerTimer = 0;
+  private tipTimer = 0;
+  private tipVisible = false;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -226,9 +228,10 @@ export class UI {
   }
 
   stripRaceChrome(): void {
-    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .soot-veil, .pause-btn").forEach((n) => n.remove());
+    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .soot-veil, .pause-btn, .race-tip").forEach((n) => n.remove());
     this.minimap = null;
     this.countdownEl = null;
+    this.hideRaceTip();
   }
 
   raceHud(_touch = true): void {
@@ -254,6 +257,7 @@ export class UI {
       <div class="steer-dbg hidden" id="steer-dbg"></div>
       <div class="countdown hidden" id="countdown">3</div>
       <div class="banner hidden" id="banner"></div>
+      <div class="race-tip hidden" id="race-tip" data-fun4-tip="1" role="status" aria-live="polite"></div>
       <div class="speedlines hidden" id="speedlines" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
       <div class="touch" id="touch">
@@ -412,7 +416,32 @@ export class UI {
     }
   }
 
-  pause(muted: boolean): void {
+  /** Short PT-BR coach tip — non-blocking, auto-hides (fun4). */
+  showRaceTip(ms = 7200): void {
+    const el = this.root.querySelector("#race-tip");
+    if (!el) return;
+    window.clearTimeout(this.tipTimer);
+    el.textContent =
+      "Segure Derrapa (ou Shift) nas curvas pra turbo · E / Item usa a caixa";
+    el.classList.remove("hidden");
+    this.tipVisible = true;
+    if (ms > 0) {
+      this.tipTimer = window.setTimeout(() => this.hideRaceTip(), ms);
+    }
+  }
+
+  hideRaceTip(): void {
+    window.clearTimeout(this.tipTimer);
+    this.tipTimer = 0;
+    this.tipVisible = false;
+    this.root.querySelector("#race-tip")?.classList.add("hidden");
+  }
+
+  isRaceTipVisible(): boolean {
+    return this.tipVisible;
+  }
+
+    pause(muted: boolean): void {
     const existing = this.root.querySelector(".overlay");
     existing?.remove();
     const wrap = document.createElement("div");
