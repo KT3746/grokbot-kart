@@ -144,7 +144,7 @@ export class UI {
           <h2>Controles</h2>
           <div class="sheet">
             <p><b>No celular:</b> à esquerda o direcional. À direita: <b>Acelera</b>, <b>Derrapa</b> e <b>Item</b>. Segure Acelera pra andar; solte pra ir freando sozinho. Segure Derrapa nas curvas pra carregar turbo.</p>
-            <p><b>No teclado:</b> W ou ↑ acelera · A D dirige · Shift (ou Espaço) derrapa · E usa o item · Esc pausa.</p>
+            <p><b>No teclado:</b> W ou ↑ acelera · A D dirige · Shift (ou Espaço) derrapa · E usa o item · Esc ou P pausa.</p>
             <p>Caixas douradas no asfalto enchem o slot de item. Use na hora certa.</p>
             <p><b>Disco Ímã</b> segue a fita da pista e busca quem está à frente. <b>Sabão</b> deixa uma poça escorregadia atrás. <b>Carga Turbo</b> empurra. <b>Fuligem</b> cega e atrasa quem vem atrás. <b>Gancho</b> puxa a próxima caixa dourada.</p>
           </div>
@@ -423,7 +423,7 @@ export class UI {
         <h2>Pausa</h2>
         <div class="sheet" style="margin-top:10px">
           <p><b>Celular:</b> esquerda = direção. Direita = Acelera, Derrapa e Item.</p>
-          <p><b>Teclado:</b> W acelera · A D dirige · Shift derrapa · E item.</p>
+          <p><b>Teclado:</b> W acelera · A D dirige · Shift derrapa · E item · Esc/P pausa.</p>
         </div>
         <div class="stack">
           <button type="button" class="btn primary" data-act="resume">Continuar</button>
