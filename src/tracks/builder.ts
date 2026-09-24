@@ -92,10 +92,10 @@ function addRibbon(
 
   const roadMat = new THREE.MeshStandardMaterial({
     map: asphalt,
-    roughness: 0.28,
-    metalness: 0.22,
-    color: 0xf0f3f8,
-    envMapIntensity: 1.05,
+    roughness: 0.78,
+    metalness: 0.04,
+    color: 0xb8c0cc,
+    envMapIntensity: 0.28,
   });
   const road = new THREE.Mesh(roadGeo, roadMat);
   road.receiveShadow = true;
@@ -112,10 +112,8 @@ function addRibbon(
   curbGeo.setAttribute("color", new THREE.Float32BufferAttribute(curbCol, 3));
   curbGeo.setIndex(curbIdx);
   curbGeo.computeVertexNormals();
-  const curbMat = new THREE.MeshStandardMaterial({
+  const curbMat = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    roughness: 0.45,
-    metalness: 0.1,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
@@ -134,12 +132,11 @@ function addRibbon(
   runTex.repeat.set(2, 18);
   const runoff = new THREE.Mesh(
     runGeo,
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshLambertMaterial({
       map: runTex,
       color: palette.runoff,
-      roughness: 1,
-      metalness: 0,
-      emissive: new THREE.Color(palette.runoff).multiplyScalar(0.18),
+      emissive: new THREE.Color(palette.runoff).multiplyScalar(0.12),
+      emissiveIntensity: 0.35,
     }),
   );
   runoff.frustumCulled = false;
@@ -189,7 +186,7 @@ function makeCenterDash(samples: TrackSample[]): THREE.Mesh {
   return new THREE.Mesh(
     geo,
     new THREE.MeshBasicMaterial({
-      color: 0xd8dbe0,
+      color: 0xf4f6fa,
       polygonOffset: true,
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
@@ -284,10 +281,8 @@ function makeBarriers(samples: TrackSample[], palette: TrackDef["palette"]): THR
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const wallMat = new THREE.MeshStandardMaterial({
+  const wallMat = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    roughness: 0.58,
-    metalness: 0.16,
     side: THREE.DoubleSide,
   });
   const wall = new THREE.Mesh(geo, wallMat);
@@ -522,7 +517,12 @@ function addShortcutRibbon(
   group.add(
     new THREE.Mesh(
       geo,
-      new THREE.MeshStandardMaterial({ map: tex, color, roughness: 0.95, metalness: surface === "metal" ? 0.35 : 0 }),
+      new THREE.MeshLambertMaterial({
+        map: tex,
+        color,
+        emissive: surface === "metal" ? 0x1a2028 : 0x000000,
+        emissiveIntensity: surface === "metal" ? 0.18 : 0,
+      }),
     ),
   );
 }

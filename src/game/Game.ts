@@ -3,7 +3,7 @@ import { AudioEngine } from "../audio/engine";
 import { forceRacePadsVisible, isMobileViewport, isPhoneViewport, viewSize, wantsTouchControls } from "../config";
 import { RACE_FAR, RACE_NEAR } from "../camera/chase";
 import { Input } from "../input/input";
-import { applyLowPerfScene, forcedLowPerf, PerfMonitor } from "../perf";
+import { applyLowPerfScene, forcedLowPerf, PerfMonitor, prefersReducedMotion } from "../perf";
 import { Championship } from "../race/championship";
 import { Race } from "../race/race";
 import type { GameMode, ItemId, KartId, TrackId } from "../types";
@@ -48,13 +48,14 @@ export class Game {
     const { w, h } = viewSize();
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: !isPhoneViewport() && !this.perf.low,
+      antialias: !isPhoneViewport() && !this.perf.low && !prefersReducedMotion(),
       powerPreference: "high-performance",
       alpha: false,
       logarithmicDepthBuffer: false,
     });
     this.renderer.autoClear = true;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.shadowMap.enabled = false;
     this.perf.apply(this.renderer);
     this.fitRenderer(w, h);
     this.renderer.setClearColor(MENU_CLEAR, 1);
@@ -141,26 +142,30 @@ export class Game {
 
   private setupMenuScene(): void {
     this.menuScene.background = new THREE.Color(MENU_CLEAR);
-    this.menuScene.fog = new THREE.FogExp2(0x0c1220, 0.008);
-    this.menuScene.add(new THREE.HemisphereLight(0x6a7c9a, 0x3a2e20, 1.45));
-    const dir = new THREE.DirectionalLight(0xf2f6fc, 1.6);
+    this.menuScene.fog = new THREE.FogExp2(0x0c1220, 0.01);
+    this.menuScene.add(new THREE.HemisphereLight(0x7a90b8, 0x3a2e20, 1.35));
+    const dir = new THREE.DirectionalLight(0xf2f6fc, 1.35);
     dir.position.set(-6, 12, 10);
+    dir.castShadow = false;
     this.menuScene.add(dir);
-    const fill = new THREE.DirectionalLight(0xffc56a, 0.7);
+    const fill = new THREE.DirectionalLight(0xffc56a, 0.45);
     fill.position.set(8, 4, -6);
+    fill.castShadow = false;
     this.menuScene.add(fill);
-    const key = new THREE.PointLight(0xffe8b0, 18, 16, 1.6);
-    key.position.set(1.4, 2.4, 2.2);
-    this.menuScene.add(key);
+    if (!isPhoneViewport() && !this.perf.low) {
+      const key = new THREE.PointLight(0xffe8b0, 14, 16, 1.6);
+      key.position.set(1.4, 2.4, 2.2);
+      this.menuScene.add(key);
+    }
     const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(18, 36),
-      new THREE.MeshStandardMaterial({ color: 0x242830, roughness: 0.7, metalness: 0.12 }),
+      new THREE.CircleGeometry(18, 32),
+      new THREE.MeshLambertMaterial({ color: 0x242830, emissive: 0x101418, emissiveIntensity: 0.35 }),
     );
     floor.rotation.x = -Math.PI / 2;
     this.menuScene.add(floor);
     const strip = new THREE.Mesh(
       new THREE.BoxGeometry(5.4, 0.08, 22),
-      new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.7 }),
+      new THREE.MeshLambertMaterial({ color: 0x2a2d33, emissive: 0x14161a, emissiveIntensity: 0.2 }),
     );
     strip.position.y = 0.04;
     this.menuScene.add(strip);
@@ -540,7 +545,10 @@ export class Game {
       if (!Number.isFinite(this.camera.position.x)) {
         this.race.attachCamera(this.camera);
       }
-      this.renderer.setClearColor(RACE_CLEAR, 1);
+      this.renderer.setClearColor(
+        this.race.scene.background instanceof THREE.Color ? this.race.scene.background.getHex() : RACE_CLEAR,
+        1,
+      );
       this.renderer.setScissorTest(false);
       this.renderer.setViewport(0, 0, w, h);
       this.renderer.autoClear = true;
