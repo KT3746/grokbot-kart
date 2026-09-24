@@ -1158,3 +1158,46 @@ body.reduce-motion .speedlines {
 }
 
 /* fun4-marker: Segure Derrapa (ou Shift) nas curvas pra turbo */
+
+.webgl-fail[hidden] {
+  display: none !important;
+}
+
+.webgl-fail {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 30%, #1a2438, #07080c 70%);
+  color: var(--text);
+  pointer-events: auto;
+}
+
+.webgl-fail-panel {
+  max-width: 28rem;
+  text-align: center;
+}
+
+.webgl-fail-panel .eyebrow {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.webgl-fail-panel h1 {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 8vw, 64px);
+  margin: 0 0 12px;
+}
+
+.webgl-fail-panel p {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.45;
+  margin: 0;
+}
+

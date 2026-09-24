@@ -2,7 +2,7 @@
 
 Corrida de kart **original** no navegador. Câmera de perseguição, asfalto com peso, drift que vale turbo e itens que mudam a prova — inspirada no gênero, sem qualquer personagem, item ou pista da Nintendo.
 
-**Jogar agora:** [https://kt3746.github.io/grokbot-kart/](https://kt3746.github.io/grokbot-kart/)
+**Jogar agora:** [https://kt3746.github.io/grokbot-kart/?v=202609241630](https://kt3746.github.io/grokbot-kart/?v=202609241630)
 
 ## Como jogar
 
@@ -87,6 +87,8 @@ npm run preview
 ## Publicação
 
 O workflow em `.github/workflows/deploy.yml` gera o site e publica no GitHub Pages a cada push em `main`. Depois do primeiro merge, ative Pages em **Settings → Pages → GitHub Actions**.
+
+Depois de cada visual/deploy, abra com cache-bust `?v=YYYYMMDDHHMM` (horário de São Paulo), por exemplo `?v=202609241630`.
 
 ## Licença
 

@@ -38,6 +38,7 @@ export class Race {
   onCue: (kind: "count" | "go" | "item" | "hit" | "finish" | "boost" | "respawn") => void = () => undefined;
   private headlight: THREE.SpotLight;
   private lampLights: THREE.PointLight[] = [];
+  private lowPerf = false;
 
   constructor(trackId: TrackId, playerKart: KartId, mobile: boolean, laps = TOTAL_LAPS, autoDrive = false) {
     this.trackId = trackId;
@@ -50,18 +51,18 @@ export class Race {
     this.scene.add(makeLights(this.built, mobile));
     this.scene.fog = new THREE.FogExp2(def.palette.fog, def.palette.fogDensity);
     this.scene.background = new THREE.Color(def.palette.fog);
-    this.scene.environment = makeRaceEnvironment();
+    this.scene.environment = mobile ? null : makeRaceEnvironment();
     this.scene.add(this.items.group);
     this.scene.add(this.fx.group);
     this.items.setup(this.built);
     this.spawn(playerKart);
 
-    this.headlight = new THREE.SpotLight(0xfff3d6, 7.2, 64, 0.55, 0.32, 1.0);
+    this.headlight = new THREE.SpotLight(0xfff3d6, mobile ? 4.2 : 6.4, mobile ? 42 : 64, 0.55, 0.32, 1.0);
     this.headlight.castShadow = false;
     this.scene.add(this.headlight);
     this.scene.add(this.headlight.target);
     const lampColor = def.mood === "neon" ? 0xff8ad4 : 0xffc56a;
-    const count = mobile ? 3 : 4;
+    const count = mobile ? 2 : 4;
     for (let i = 0; i < count; i++) {
       const pl = new THREE.PointLight(lampColor, 0, 26, 1.7);
       this.scene.add(pl);
@@ -266,7 +267,7 @@ export class Race {
     this.headlight.target.updateMatrixWorld();
 
     const lamps = this.built.lampPositions;
-    if (!lamps.length) {
+    if (this.lowPerf || !lamps.length) {
       for (const l of this.lampLights) l.intensity = 0;
       return;
     }
@@ -338,7 +339,11 @@ export class Race {
   }
 
   applyLowPerf(): void {
-    this.headlight.intensity = Math.min(this.headlight.intensity, 3.2);
+    this.lowPerf = true;
+    this.fx.lowFx = true;
+    this.scene.environment = null;
+    this.headlight.intensity = Math.min(this.headlight.intensity, 2.4);
+    this.headlight.distance = Math.min(this.headlight.distance, 28);
     for (const l of this.lampLights) {
       l.intensity = 0;
       l.visible = false;
