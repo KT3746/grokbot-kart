@@ -87,8 +87,8 @@ export class PerfMonitor {
       renderer.toneMappingExposure = 1.05;
       return;
     }
-    // Cap ~1–1.5: phones stay near 1.15, desktop 1.5. Antialias is gated at construct.
-    renderer.setPixelRatio(Math.min(dpr, phone ? 1.15 : 1.5));
+    // Cap ~1–1.5: phones stay near 1.25, desktop 1.5. Antialias is gated at construct.
+    renderer.setPixelRatio(Math.min(dpr, phone ? 1.25 : 1.5));
     renderer.shadowMap.enabled = !phone;
     if (renderer.shadowMap.enabled) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;

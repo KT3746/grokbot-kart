@@ -85,7 +85,8 @@ export class Game {
       window.setTimeout(() => this.resize(), 320);
     });
     window.visualViewport?.addEventListener("resize", () => this.resize());
-    // Blur / visibility must NOT pause or abandon. Only Esc and the pause button.
+    // Aba/app oculta mid-corrida: pausa + suspende áudio (mesmo bar 1945/TOP/CABANA).
+    document.addEventListener("visibilitychange", () => this.onVisibility());
     const unlock = () => {
       void this.audio.unlock();
       window.removeEventListener("pointerdown", unlock);
@@ -95,7 +96,29 @@ export class Game {
     window.addEventListener("keydown", unlock);
     if (forcedLowPerf()) this.enterLowPerf();
     this.syncReducedMotion();
+    try {
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.addEventListener?.("change", () => {
+        this.syncReducedMotion();
+      });
+    } catch {
+      /* ok */
+    }
     (window as unknown as { pista: Game }).pista = this;
+  }
+
+  private onVisibility(): void {
+    if (!document.hidden) {
+      // Continuar na pausa: áudio só volta com resume / Continuar.
+      return;
+    }
+    try {
+      this.audio.suspend();
+    } catch {
+      /* ok */
+    }
+    if (this.view === "race" && this.race && this.race.phase !== "finished" && !this.race.paused) {
+      this.pauseRace();
+    }
   }
 
   private syncReducedMotion(): void {
@@ -110,6 +133,11 @@ export class Game {
     this.lastTickMs = performance.now();
     const sim = () => {
       if (this.ticking) return;
+      // Aba oculta: não simula nem renderiza (dt efetivo = 0).
+      if (document.hidden) {
+        this.lastTickMs = performance.now();
+        return;
+      }
       this.ticking = true;
       try {
         const now = performance.now();
@@ -441,12 +469,14 @@ export class Game {
     if (!this.race || this.race.phase === "finished") return;
     this.race.paused = true;
     this.audio.pauseHum(true);
+    this.audio.suspend();
     this.ui.pause(this.muted);
   }
 
   private resumeRace(): void {
     if (!this.race) return;
     this.race.paused = false;
+    this.audio.resume();
     this.audio.pauseHum(false);
     this.ui.hidePause();
   }

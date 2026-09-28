@@ -62,6 +62,8 @@ body.is-race {
   display: block;
   background: #152038;
   z-index: 0;
+  /* Toque cai no #ui / #touch — canvas não rouba o gesto. */
+  pointer-events: none;
 }
 
 #ui {
@@ -924,10 +926,10 @@ body.is-race.touch-on .touch {
 }
 
 .pad-btn.drift {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  min-height: 46px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 50%;
   font-size: 9px;
   letter-spacing: 0.04em;
@@ -941,8 +943,10 @@ body.is-race.touch-on .touch {
 }
 
 .pad-btn.item {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 50%;
   background: linear-gradient(160deg, #ffe9a0, #f5b020 50%, #d07800);
   border: 2px solid rgba(255, 245, 200, 0.85);
@@ -1155,6 +1159,54 @@ body.reduce-motion .speedlines {
   animation: none !important;
   opacity: 0.2;
   mix-blend-mode: normal;
+}
+
+/* mobile-polish: HUD legível em ~390px (iPhone) */
+@media (max-width: 390px) {
+  .hud-tl {
+    max-width: 40vw;
+  }
+
+  .hud-tr {
+    max-width: min(46vw, 148px);
+    gap: 6px;
+  }
+
+  .pos {
+    font-size: 28px;
+  }
+
+  .lap-box,
+  .speed-box,
+  .item-slot {
+    padding: 5px 8px;
+  }
+
+  .num {
+    font-size: 22px;
+  }
+
+  .speed-box .num {
+    font-size: 28px;
+  }
+
+  #minimap {
+    width: 58px;
+    height: 58px;
+  }
+
+  .item-slot {
+    width: 70px;
+    min-height: 44px;
+    font-size: 10px;
+  }
+
+  .icon-btn,
+  .pause-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* fun4-marker: Segure Derrapa (ou Shift) nas curvas pra turbo */
