@@ -98,6 +98,28 @@ export class AudioEngine {
     return this.muted;
   }
 
+  /** Aba oculta / pausa: corta o AudioContext pra não vazar motor no fundo. */
+  suspend(): void {
+    if (this.ctx && this.ctx.state === "running") {
+      try {
+        void this.ctx.suspend();
+      } catch {
+        /* ok */
+      }
+    }
+  }
+
+  resume(): void {
+    if (this.muted) return;
+    if (this.ctx && this.ctx.state === "suspended") {
+      try {
+        void this.ctx.resume();
+      } catch {
+        /* ok */
+      }
+    }
+  }
+
   engine(rpm: number, throttle: number, boost: boolean): void {
     if (!this.ctx || !this.oscA || !this.oscB || !this.filter || !this.engineGain) return;
     const r = Math.max(0, Math.min(1, rpm));
