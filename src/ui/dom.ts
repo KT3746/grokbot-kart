@@ -5,6 +5,7 @@ import { ITEM_LABEL } from "../items/system";
 import type { ItemId, KartId, TrackId } from "../types";
 import type { RaceResultRow } from "../race/types";
 import type { CupRow } from "../race/championship";
+import { dailyMetaLine } from "../meta/daily";
 
 export type UiAction =
   | { type: "quick" }
@@ -116,7 +117,8 @@ export class UI {
     this.countdownEl = null;
   }
 
-  title(muted: boolean): void {
+  title(muted: boolean, metaLine?: string): void {
+    const meta = metaLine ?? dailyMetaLine();
     this.set(`
       <section class="screen">
         <div class="screen-body">
@@ -125,6 +127,7 @@ export class UI {
               <div class="eyebrow">Corrida de kart original</div>
               <h1>KART</h1>
               <p class="lede">Terceira pessoa, asfalto com peso, itens que mudam a prova. Sem mascote emprestado — só o grid e a noite.</p>
+              <p class="daily-meta" role="status">${meta}</p>
             </div>
             <button type="button" class="icon-btn mute-btn" data-act="mute" aria-label="${muted ? "Ativar som" : "Mudo"}">${muted ? "Mudo" : "Som"}</button>
           </div>
@@ -267,9 +270,9 @@ export class UI {
       <div class="touch" id="touch">
         <div class="zone stick-wrap stick-invisible" aria-label="Direção"><div class="stick-base"></div><div class="stick-knob"></div></div>
         <div class="zone pad-right pad-row">
-          <button type="button" class="pad-btn item" data-pad="item">Item</button>
-          <button type="button" class="pad-btn drift" data-pad="drift">Derrapa</button>
-          <button type="button" class="pad-btn accel" data-pad="throttle">Acelera</button>
+          <button type="button" class="pad-btn item" data-pad="item" aria-label="Usar item"><span class="pad-label">Item</span></button>
+          <button type="button" class="pad-btn drift" data-pad="drift" aria-label="Derrapar"><span class="pad-label">Derrapa</span></button>
+          <button type="button" class="pad-btn accel" data-pad="throttle" aria-label="Acelerar"><span class="pad-label">Acelera</span></button>
         </div>
       </div>
     `);
@@ -511,21 +514,44 @@ export class UI {
     this.root.querySelector(".overlay")?.remove();
   }
 
-  results(rows: RaceResultRow[], cup: boolean, more: boolean): void {
+  results(
+    rows: RaceResultRow[],
+    cup: boolean,
+    more: boolean,
+    opts?: { metaLine?: string; newBest?: boolean },
+  ): void {
+    const medal = (place: number) =>
+      place === 1 ? "🥇" : place === 2 ? "🥈" : place === 3 ? "🥉" : `P${place}`;
+    const podium = rows
+      .slice(0, 3)
+      .map((r) => {
+        const you = r.isPlayer ? " you" : "";
+        return `<div class="podium-slot place-${r.place}${you}" aria-label="P${r.place} ${r.name}">
+          <div class="podium-medal">${medal(r.place)}</div>
+          <div class="podium-name">${r.name}${r.isPlayer ? " · você" : ""}</div>
+          <div class="podium-time">${formatTime(r.totalTime)}</div>
+        </div>`;
+      })
+      .join("");
     const body = rows
       .map(
         (r) => `<tr class="${r.isPlayer ? "you" : ""}">
-        <td>P${r.place}</td><td>${r.name}${r.isPlayer ? " (você)" : ""}</td>
+        <td><span class="place-pill place-${r.place}">${medal(r.place)}</span></td>
+        <td>${r.name}${r.isPlayer ? " (você)" : ""}</td>
         <td>${formatTime(r.totalTime)}</td><td>${formatTime(r.bestLap)}</td>
       </tr>`,
       )
       .join("");
+    const youPlace = rows.find((r) => r.isPlayer)?.place;
+    const meta = opts?.metaLine ? `<p class="daily-meta podium-meta" role="status">${opts.metaLine}${opts.newBest ? " · <b>recorde do dia!</b>" : ""}</p>` : "";
     this.set(`
-      <section class="screen solid">
+      <section class="screen solid results-screen">
         <div class="screen-body">
-          <div class="eyebrow">Chegada</div>
-          <h2>${rows.find((r) => r.isPlayer)?.place === 1 ? "Bandeirada sua" : "Fim da prova"}</h2>
-          <table class="table">
+          <div class="eyebrow">Pódio · chegada</div>
+          <h2>${youPlace === 1 ? "Bandeirada sua" : youPlace ? `Você chegou em P${youPlace}` : "Fim da prova"}</h2>
+          <div class="podium" aria-label="Pódio">${podium}</div>
+          ${meta}
+          <table class="table results-table">
             <thead><tr><th>Pos</th><th>Piloto</th><th>Tempo</th><th>Melhor volta</th></tr></thead>
             <tbody>${body}</tbody>
           </table>

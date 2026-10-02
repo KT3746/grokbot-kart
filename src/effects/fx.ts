@@ -16,7 +16,7 @@ export class Effects {
   spawnDrift(kart: KartBody): void {
     if (!kart.drifting && kart.boostTime <= 0) return;
     const boosting = kart.boostTime > 0;
-    const spawnChance = this.lowFx ? (boosting ? 0.32 : 0.16) : boosting ? 0.84 : 0.58;
+    const spawnChance = this.lowFx ? (boosting ? 0.4 : 0.2) : boosting ? 0.92 : 0.62;
     if (Math.random() > spawnChance) return;
     const back = new THREE.Vector3(-Math.sin(kart.heading), 0, -Math.cos(kart.heading));
     const side = new THREE.Vector3(Math.cos(kart.heading), 0, -Math.sin(kart.heading));
@@ -121,6 +121,26 @@ export class Effects {
       }
     }
     this.puffs = this.puffs.filter((p) => p.life > 0);
+  }
+
+
+  /** Soft cyan trail cue for the rival ahead — reads as a "ghost" line to chase. */
+  spawnGhostTrail(kart: KartBody): void {
+    if (this.lowFx && Math.random() > 0.45) return;
+    if (Math.random() > (this.lowFx ? 0.28 : 0.55)) return;
+    const back = new THREE.Vector3(-Math.sin(kart.heading), 0, -Math.cos(kart.heading));
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x7ad7ff,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false,
+    });
+    const puff = new THREE.Mesh(this.smokeGeo, mat);
+    puff.position.copy(kart.position).addScaledVector(back, 0.35 + Math.random() * 0.25);
+    puff.position.y += 0.22;
+    puff.scale.setScalar(0.55 + Math.random() * 0.35);
+    this.group.add(puff);
+    this.puffs.push({ mesh: puff, life: 0.55, rise: 0.35, grow: 1.1 });
   }
 
   spawnLapBurst(kart: KartBody): void {

@@ -11,6 +11,7 @@ import { ITEM_LABEL } from "../items/system";
 import { UI } from "../ui/dom";
 import { createKartMesh } from "../karts/mesh";
 import { getKart } from "../karts/roster";
+import { dailyMetaLine, recordRaceFinish } from "../meta/daily";
 
 const MENU_CLEAR = 0x0b1018;
 const RACE_CLEAR = 0x152038;
@@ -244,7 +245,7 @@ export class Game {
 
   private showTitle(): void {
     this.view = "title";
-    this.ui.title(this.muted);
+    this.ui.title(this.muted, dailyMetaLine());
     this.syncChrome();
   }
 
@@ -377,7 +378,7 @@ export class Game {
         break;
       case "mute":
         this.muted = this.audio.toggleMute();
-        if (this.view === "title") this.ui.title(this.muted);
+        if (this.view === "title") this.ui.title(this.muted, dailyMetaLine());
         if (this.view === "race" && this.race?.paused) this.ui.pause(this.muted);
         break;
       default:
@@ -446,7 +447,12 @@ export class Game {
         setTimeout(() => {
           if (this.race && this.view === "race") {
             this.view = "results";
-            this.ui.results(this.race.lastResults, this.mode === "cup", this.mode === "cup" && !this.wouldEndCup());
+            const you = this.race.lastResults.find((r) => r.isPlayer);
+            const recorded = recordRaceFinish(you?.bestLap ?? Infinity);
+            this.ui.results(this.race.lastResults, this.mode === "cup", this.mode === "cup" && !this.wouldEndCup(), {
+              metaLine: dailyMetaLine(recorded.meta),
+              newBest: recorded.newBest,
+            });
             this.audio.silence();
             this.syncChrome();
           }
@@ -518,7 +524,7 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.fullFrame(MENU_CLEAR);
     this.view = "title";
-    this.ui.title(this.muted);
+    this.ui.title(this.muted, dailyMetaLine());
     this.syncChrome();
   }
 

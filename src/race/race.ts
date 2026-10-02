@@ -245,6 +245,13 @@ export class Race {
     }
 
     this.fx.spawnDrift(this.player.kart);
+    // Ghost trail on nearest rival ahead (or P1 if player leads) — chase cue.
+    const rivals = this.racers.filter((r) => !r.isPlayer && !r.kart.finished);
+    const ahead = rivals
+      .filter((r) => r.place < this.player.place)
+      .sort((a, b) => a.place - b.place);
+    const ghostTarget = ahead[0] ?? rivals.sort((a, b) => a.place - b.place)[0];
+    if (ghostTarget) this.fx.spawnGhostTrail(ghostTarget.kart);
     this.fx.update(dt);
     this.cameraRig.update(camera, this.player.kart, dt, false, this.built);
     this.syncCarLights();
