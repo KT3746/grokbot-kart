@@ -1338,3 +1338,138 @@ body.reduce-motion .score-pop.go {
   animation: none !important;
   opacity: 0 !important;
 }
+
+
+/* === wave2: daily meta + podium + mobile pad clarity === */
+.daily-meta {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  display: inline-block;
+  border-radius: 999px;
+  background: rgba(122, 215, 255, 0.1);
+  border: 1px solid rgba(122, 215, 255, 0.28);
+  color: #cfefff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.podium-meta {
+  display: block;
+  margin: 12px 0 14px;
+  text-align: center;
+}
+.podium-meta b {
+  color: #ffe27a;
+  font-weight: 800;
+}
+
+.results-screen .podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 6px;
+}
+.podium-slot {
+  text-align: center;
+  padding: 12px 8px 10px;
+  border-radius: 16px;
+  background: rgba(12, 16, 28, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+.podium-slot.place-1 {
+  border-color: rgba(255, 210, 90, 0.55);
+  background: linear-gradient(180deg, rgba(255, 210, 90, 0.18), rgba(12, 16, 28, 0.75));
+  transform: translateY(-4px);
+}
+.podium-slot.place-2 {
+  border-color: rgba(200, 220, 255, 0.4);
+}
+.podium-slot.place-3 {
+  border-color: rgba(220, 150, 90, 0.4);
+}
+.podium-slot.you {
+  outline: 2px solid rgba(122, 255, 180, 0.55);
+  outline-offset: 1px;
+}
+.podium-medal {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.podium-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: #f4f7ff;
+}
+.podium-time {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9eb0c8;
+  font-variant-numeric: tabular-nums;
+}
+
+.place-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2em;
+  font-weight: 800;
+}
+.results-table tr.you td {
+  background: rgba(122, 255, 180, 0.08);
+  color: #e8fff2;
+}
+.results-table tr.you td:first-child {
+  box-shadow: inset 3px 0 0 #7dff9a;
+}
+
+.pad-btn .pad-label {
+  display: block;
+  line-height: 1.05;
+  pointer-events: none;
+}
+.pad-btn.item,
+.pad-btn.drift {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  min-height: 54px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+.pad-btn.accel {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  font-size: 13px;
+}
+.pad-right.pad-row {
+  gap: 10px;
+}
+@media (max-width: 420px) {
+  .pad-btn.item,
+  .pad-btn.drift {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    font-size: 10px;
+  }
+  .pad-btn.accel {
+    width: 84px;
+    height: 84px;
+    min-width: 84px;
+    min-height: 84px;
+  }
+  .results-screen .podium {
+    gap: 6px;
+  }
+  .podium-name {
+    font-size: 11px;
+  }
+}
