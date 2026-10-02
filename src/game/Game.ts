@@ -14,6 +14,7 @@ import { getKart } from "../karts/roster";
 
 const MENU_CLEAR = 0x0b1018;
 const RACE_CLEAR = 0x152038;
+const RACE_TIP_KEY = "kart-race-tip-v1";
 
 type View = "title" | "karts" | "tracks" | "race" | "results" | "standings" | "controls" | "credits";
 
@@ -117,7 +118,7 @@ export class Game {
       /* ok */
     }
     if (this.view === "race" && this.race && this.race.phase !== "finished" && !this.race.paused) {
-      this.pauseRace();
+      this.pauseRace(true);
     }
   }
 
@@ -454,8 +455,18 @@ export class Game {
     };
     this.view = "race";
     this.ui.raceHud(true);
-    this.tipArmed = true;
-    this.ui.showRaceTip(7200);
+    this.tipArmed = false;
+    try {
+      if (!localStorage.getItem(RACE_TIP_KEY)) {
+        this.tipArmed = true;
+        this.ui.showRaceTip(58000);
+        // Mark seen on first show so it only appears once (even if they quit mid-tip).
+        localStorage.setItem(RACE_TIP_KEY, "1");
+      }
+    } catch {
+      this.tipArmed = true;
+      this.ui.showRaceTip(58000);
+    }
     this.syncChrome();
     this.audio.countdown(3);
     if (this.perf.low) this.race.applyLowPerf();
@@ -465,12 +476,12 @@ export class Game {
     return this.mode === "cup" && this.cup.index >= 2;
   }
 
-  private pauseRace(): void {
+  private pauseRace(fromVisibility = false): void {
     if (!this.race || this.race.phase === "finished") return;
     this.race.paused = true;
     this.audio.pauseHum(true);
     this.audio.suspend();
-    this.ui.pause(this.muted);
+    this.ui.pause(this.muted, { fromVisibility });
   }
 
   private resumeRace(): void {
@@ -517,9 +528,23 @@ export class Game {
     if (this.view === "race" && this.race) {
       this.ensureTouchLayer();
       if (this.input.consumePause()) this.togglePause();
-      if (this.tipArmed && this.ui.isRaceTipVisible() && this.input.state.throttle > 0.4) {
-        this.ui.hideRaceTip();
-        this.tipArmed = false;
+      if (this.tipArmed && this.ui.isRaceTipVisible()) {
+        const st = this.input.state;
+        const meaningful =
+          st.throttle > 0.35 ||
+          Math.abs(st.steer) > 0.35 ||
+          st.drift ||
+          st.item ||
+          this.input.itemPressed;
+        if (meaningful) {
+          this.ui.hideRaceTip();
+          this.tipArmed = false;
+          try {
+            localStorage.setItem(RACE_TIP_KEY, "1");
+          } catch {
+            /* ok */
+          }
+        }
       }
       this.race.update(dt, this.input, this.camera);
       const p = this.race.player;
@@ -535,6 +560,8 @@ export class Game {
       });
       if (p.item && p.item !== this.lastHudItem) {
         this.ui.banner(ITEM_LABEL[p.item], 650);
+        this.ui.softFlash("pickup");
+        this.ui.scorePop(ITEM_LABEL[p.item]);
       }
       this.lastHudItem = p.item;
       if (p.kart.lap > this.lastHudLap) {
@@ -542,6 +569,8 @@ export class Game {
           this.audio.lap();
           this.ui.banner(`VOLTA ${p.kart.lap + 1}/${this.race.laps}`, 900);
           this.race.fx.spawnLapBurst(p.kart);
+          this.ui.softFlash("lap");
+          this.ui.scorePop(`VOLTA ${p.kart.lap + 1}`);
         }
         this.lastHudLap = p.kart.lap;
       }
