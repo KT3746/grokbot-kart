@@ -33,6 +33,8 @@ export class UI {
   private bannerTimer = 0;
   private tipTimer = 0;
   private tipVisible = false;
+  private flashTimer = 0;
+  private scorePopTimer = 0;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -228,7 +230,7 @@ export class UI {
   }
 
   stripRaceChrome(): void {
-    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .soot-veil, .pause-btn, .race-tip").forEach((n) => n.remove());
+    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop").forEach((n) => n.remove());
     this.minimap = null;
     this.countdownEl = null;
     this.hideRaceTip();
@@ -258,6 +260,8 @@ export class UI {
       <div class="countdown hidden" id="countdown">3</div>
       <div class="banner hidden" id="banner"></div>
       <div class="race-tip hidden" id="race-tip" data-fun4-tip="1" role="status" aria-live="polite"></div>
+      <div class="soft-flash hidden" id="soft-flash" aria-hidden="true"></div>
+      <div class="score-pop hidden" id="score-pop" aria-hidden="true"></div>
       <div class="speedlines hidden" id="speedlines" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
       <div class="touch" id="touch">
@@ -416,18 +420,51 @@ export class UI {
     }
   }
 
-  /** Short PT-BR coach tip — non-blocking, auto-hides (fun4). */
-  showRaceTip(ms = 7200): void {
+  /** First-minute PT-BR tip (steering/boost) — dismiss on input; caller gates localStorage. */
+  showRaceTip(ms = 58000): void {
     const el = this.root.querySelector("#race-tip");
     if (!el) return;
     window.clearTimeout(this.tipTimer);
     el.textContent =
-      "Segure Derrapa (ou Shift) nas curvas pra turbo · E / Item usa a caixa";
+      "Dirija com A/D ou o stick · Segure Derrapa (Shift) na curva e solte limpo pro turbo";
     el.classList.remove("hidden");
     this.tipVisible = true;
     if (ms > 0) {
       this.tipTimer = window.setTimeout(() => this.hideRaceTip(), ms);
     }
+  }
+
+  /** Soft screen flash on pickup / lap — skipped when reduce-motion is on. */
+  softFlash(kind: "pickup" | "lap" = "pickup"): void {
+    if (document.body.classList.contains("reduce-motion")) return;
+    const el = this.root.querySelector("#soft-flash");
+    if (!el) return;
+    window.clearTimeout(this.flashTimer);
+    el.classList.remove("hidden", "flash-pickup", "flash-lap", "go");
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add(kind === "lap" ? "flash-lap" : "flash-pickup", "go");
+    el.classList.remove("hidden");
+    this.flashTimer = window.setTimeout(() => {
+      el.classList.add("hidden");
+      el.classList.remove("go", "flash-pickup", "flash-lap");
+    }, 420);
+  }
+
+  /** Score-pop label over the HUD (item name / volta). */
+  scorePop(text: string): void {
+    if (document.body.classList.contains("reduce-motion")) return;
+    const el = this.root.querySelector("#score-pop");
+    if (!el) return;
+    window.clearTimeout(this.scorePopTimer);
+    el.textContent = text;
+    el.classList.remove("hidden", "go");
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add("go");
+    el.classList.remove("hidden");
+    this.scorePopTimer = window.setTimeout(() => {
+      el.classList.add("hidden");
+      el.classList.remove("go");
+    }, 780);
   }
 
   hideRaceTip(): void {
@@ -441,15 +478,22 @@ export class UI {
     return this.tipVisible;
   }
 
-    pause(muted: boolean): void {
+  pause(muted: boolean, opts?: { fromVisibility?: boolean }): void {
     const existing = this.root.querySelector(".overlay");
     existing?.remove();
     const wrap = document.createElement("div");
     wrap.className = "overlay";
+    const fromVis = !!opts?.fromVisibility;
+    const eyebrow = fromVis ? "App em segundo plano" : "Prova interrompida";
+    const title = fromVis ? "Pausado" : "Pausa";
+    const note = fromVis
+      ? `<p class="pause-note"><b>Tela oculta</b> — a corrida pausou sozinha. Toque <b>Continuar</b> pra voltar.</p>`
+      : "";
     wrap.innerHTML = `
-      <div class="panel">
-        <div class="eyebrow">Prova interrompida</div>
-        <h2>Pausa</h2>
+      <div class="panel${fromVis ? " pause-bg" : ""}">
+        <div class="eyebrow">${eyebrow}</div>
+        <h2>${title}</h2>
+        ${note}
         <div class="sheet" style="margin-top:10px">
           <p><b>Celular:</b> esquerda = direção. Direita = Acelera, Derrapa e Item.</p>
           <p><b>Teclado:</b> W acelera · A D dirige · Shift derrapa · E item · Esc/P pausa.</p>
