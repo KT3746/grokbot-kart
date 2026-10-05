@@ -92,8 +92,10 @@ export class Input {
 
     const setPad = (name: keyof typeof this.pad, on: boolean) => {
       this.pad[name] = on;
-      const btn = layer.querySelector(`[data-pad="${name}"]`);
-      btn?.classList.toggle("active", on);
+      layer.querySelectorAll(`[data-pad="${name}"]`).forEach((btn) => btn.classList.toggle("active", on));
+      if (name === "item") {
+        document.getElementById("hud-item")?.classList.toggle("active", on);
+      }
     };
 
     const onWindowUp = (e: Event) => {
@@ -106,12 +108,15 @@ export class Input {
         for (const v of this.padPointers.values()) if (v === name) still = true;
         if (!still) {
           this.pad[name] = false;
-          this.boundLayer?.querySelector(`[data-pad="${name}"]`)?.classList.remove("active");
+          this.boundLayer?.querySelectorAll(`[data-pad="${name}"]`).forEach((btn) => btn.classList.remove("active"));
+          if (name === "item") document.getElementById("hud-item")?.classList.remove("active");
         }
       }
       if (this.steerPointer === pid) {
         this.steerPointer = null;
         this.steerTouch = 0;
+        const stickEl = this.boundLayer?.querySelector(".stick-wrap") as HTMLElement | null;
+        stickEl?.classList.remove("stick-active");
         const knobEl = this.boundLayer?.querySelector(".stick-knob") as HTMLElement | null;
         if (knobEl) knobEl.style.transform = "translate(0,0)";
       }
@@ -134,6 +139,7 @@ export class Input {
         e.preventDefault();
         e.stopPropagation();
         this.steerPointer = e.pointerId;
+        stick.classList.add("stick-active");
         try {
           stick.setPointerCapture(e.pointerId);
         } catch {
@@ -146,9 +152,11 @@ export class Input {
       });
     }
 
-    layer.querySelectorAll("[data-pad]").forEach((node) => {
-      const el = node as HTMLElement;
+    const wirePad = (el: HTMLElement) => {
+      if (el.dataset.padWired === "1") return;
+      el.dataset.padWired = "1";
       const name = el.getAttribute("data-pad") as keyof typeof this.pad;
+      if (!name) return;
       el.addEventListener(
         "pointerdown",
         (e) => {
@@ -176,7 +184,12 @@ export class Input {
         { capture: true },
       );
       el.addEventListener("contextmenu", (ev) => ev.preventDefault());
-    });
+    };
+
+    layer.querySelectorAll("[data-pad]").forEach((node) => wirePad(node as HTMLElement));
+    // Wave 3: HUD item slot is also a tap target (easier thumb reach than the pad).
+    const hudItem = document.getElementById("hud-item");
+    if (hudItem?.hasAttribute("data-pad")) wirePad(hudItem);
   }
 
   refreshTouchFlag(): void {

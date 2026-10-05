@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { AudioEngine } from "../audio/engine";
-import { forceRacePadsVisible, isMobileViewport, isPhoneViewport, viewSize, wantsTouchControls } from "../config";
+import { forceRacePadsVisible, isMobileViewport, isPhoneViewport, viewSize, wantsTouchControls, wrapPi } from "../config";
+import { queryTrack } from "../tracks/builder";
 import { RACE_FAR, RACE_NEAR } from "../camera/chase";
 import { Input } from "../input/input";
 import { applyLowPerfScene, forcedLowPerf, PerfMonitor, prefersReducedMotion } from "../perf";
@@ -34,6 +35,8 @@ export class Game {
   private lastPlace = 0;
   private lastHudItem: ItemId | null | undefined = undefined;
   private tipArmed = false;
+  private wayCueKind: "wrong" | "off" | null = null;
+  private wayCueHold = 0;
   cup = new Championship();
   muted = false;
   private menuScene = new THREE.Scene();
@@ -224,6 +227,76 @@ export class Game {
     this.renderer.setClearColor(clear, 1);
     this.renderer.autoClear = true;
     this.renderer.clear();
+  }
+
+
+  /** Seconds to the rival ahead (or lead over P2). Uses track length + current speed. */
+  private rivalGap(player: { place: number; kart: { lap: number; progress: number; speed: number; finished: boolean } }): {
+    text: string | null;
+    kind: "ahead" | "lead" | "none";
+  } {
+    if (!this.race || player.kart.finished) return { text: null, kind: "none" };
+    const len = Math.max(80, this.race.built.length || 400);
+    const distOf = (r: { kart: { lap: number; progress: number } }) => r.kart.lap + r.kart.progress;
+    const you = distOf(player);
+    const spd = Math.max(8, Math.abs(player.kart.speed));
+    const others = this.race.racers.filter((r) => !r.isPlayer && !r.kart.finished);
+    if (!others.length) return { text: null, kind: "none" };
+    if (player.place === 1) {
+      const chase = [...others].sort((a, b) => distOf(b) - distOf(a))[0];
+      const gapProg = Math.max(0, you - distOf(chase));
+      const sec = (gapProg * len) / spd;
+      return { text: `−${sec.toFixed(1)}s`, kind: "lead" };
+    }
+    const ahead = others
+      .filter((r) => distOf(r) >= you)
+      .sort((a, b) => distOf(a) - distOf(b))[0];
+    if (!ahead) return { text: null, kind: "none" };
+    const gapProg = Math.max(0, distOf(ahead) - you);
+    const sec = (gapProg * len) / spd;
+    return { text: `+${sec.toFixed(1)}s · P${ahead.place}`, kind: "ahead" };
+  }
+
+  private updateWayCue(
+    kart: {
+      heading: number;
+      speed: number;
+      onAsphalt: boolean;
+      position: THREE.Vector3;
+      progress: number;
+      finished: boolean;
+    },
+    dt: number,
+  ): void {
+    if (!this.race || kart.finished || this.race.paused) {
+      if (this.wayCueKind) {
+        this.wayCueKind = null;
+        this.wayCueHold = 0;
+        this.ui.setWayCue(null);
+      }
+      return;
+    }
+    const q = queryTrack(this.race.built.samples, kart.position, kart.progress);
+    const roadH = Math.atan2(q.tangent.x, q.tangent.z);
+    const err = Math.abs(wrapPi(kart.heading - roadH));
+    const moving = Math.abs(kart.speed) > 5.5;
+    let hit: "wrong" | "off" | null = null;
+    if (moving && err > Math.PI * 0.62) hit = "wrong";
+    else if (!kart.onAsphalt && moving && Math.abs(q.lateral) > q.halfWidth * 0.92) hit = "off";
+
+    if (hit) this.wayCueHold = Math.min(1.4, this.wayCueHold + dt);
+    else this.wayCueHold = Math.max(0, this.wayCueHold - dt * 2);
+
+    let show: "wrong" | "off" | null = null;
+    if (this.wayCueHold >= 0.4 && hit) show = hit;
+    else if (this.wayCueHold >= 0.15 && this.wayCueKind && hit === this.wayCueKind) show = this.wayCueKind;
+
+    if (show !== this.wayCueKind) {
+      this.wayCueKind = show;
+      if (show === "wrong") this.ui.setWayCue("SENTIDO ERRADO", "wrong");
+      else if (show === "off") this.ui.setWayCue("VOLTA PRO ASFALTO", "off");
+      else this.ui.setWayCue(null);
+    }
   }
 
   private enterLowPerf(): void {
@@ -461,6 +534,9 @@ export class Game {
     };
     this.view = "race";
     this.ui.raceHud(true);
+    this.wayCueKind = null;
+    this.wayCueHold = 0;
+    this.ui.setWayCue(null);
     this.tipArmed = false;
     try {
       if (!localStorage.getItem(RACE_TIP_KEY)) {
@@ -554,6 +630,7 @@ export class Game {
       }
       this.race.update(dt, this.input, this.camera);
       const p = this.race.player;
+      const gap = this.rivalGap(p);
       this.ui.updateHud({
         place: p.place,
         lap: p.kart.lap,
@@ -563,7 +640,12 @@ export class Game {
         trackName: this.race.built.def.name,
         smoke: p.kart.smokeTime > 0,
         boost: p.kart.boostTime > 0,
+        driftCharge: p.kart.driftCharge,
+        drifting: p.kart.drifting,
+        gapText: gap.text,
+        gapKind: gap.kind,
       });
+      this.updateWayCue(p.kart, dt);
       if (p.item && p.item !== this.lastHudItem) {
         this.ui.banner(ITEM_LABEL[p.item], 650);
         this.ui.softFlash("pickup");
@@ -591,6 +673,7 @@ export class Game {
           x: r.kart.position.x,
           z: r.kart.position.z,
           you: r.isPlayer,
+          heading: r.isPlayer ? r.kart.heading : undefined,
         })),
       );
       const cd = this.race.countdownLabel();
