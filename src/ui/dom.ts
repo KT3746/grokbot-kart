@@ -233,7 +233,7 @@ export class UI {
   }
 
   stripRaceChrome(): void {
-    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop").forEach((n) => n.remove());
+    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .way-cue, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop").forEach((n) => n.remove());
     this.minimap = null;
     this.countdownEl = null;
     this.hideRaceTip();
@@ -244,6 +244,11 @@ export class UI {
       <div class="hud">
         <div class="hud-tl">
           <div class="pos"><span id="hud-pos">P–</span><small id="hud-name">—</small></div>
+          <div class="gap-box" id="hud-gap" aria-live="polite">—</div>
+          <div class="drift-meter hidden" id="hud-drift" aria-hidden="true">
+            <div class="drift-meter-fill" id="hud-drift-fill"></div>
+            <span class="drift-meter-label">TURBO</span>
+          </div>
         </div>
         <div class="hud-tr">
           <div class="hud-tr-row">
@@ -256,22 +261,26 @@ export class UI {
         </div>
         <div class="hud-bot">
           <div class="speed-box" id="hud-speed"><div class="kicker">km/h</div><div class="num" id="hud-spd">0</div></div>
-          <div class="item-slot" id="hud-item">VAZIO</div>
+          <button type="button" class="item-slot" id="hud-item" data-pad="item" aria-label="Usar item">VAZIO</button>
         </div>
       </div>
       <div class="steer-dbg hidden" id="steer-dbg"></div>
       <div class="countdown hidden" id="countdown">3</div>
       <div class="banner hidden" id="banner"></div>
+      <div class="way-cue hidden" id="way-cue" role="status" aria-live="assertive"></div>
       <div class="race-tip hidden" id="race-tip" data-fun4-tip="1" role="status" aria-live="polite"></div>
       <div class="soft-flash hidden" id="soft-flash" aria-hidden="true"></div>
       <div class="score-pop hidden" id="score-pop" aria-hidden="true"></div>
       <div class="speedlines hidden" id="speedlines" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
       <div class="touch" id="touch">
-        <div class="zone stick-wrap stick-invisible" aria-label="Direção"><div class="stick-base"></div><div class="stick-knob"></div></div>
+        <div class="zone stick-wrap stick-ghost" aria-label="Direção"><div class="stick-base"></div><div class="stick-knob"></div></div>
         <div class="zone pad-right pad-row">
           <button type="button" class="pad-btn item" data-pad="item" aria-label="Usar item"><span class="pad-label">Item</span></button>
-          <button type="button" class="pad-btn drift" data-pad="drift" aria-label="Derrapar"><span class="pad-label">Derrapa</span></button>
+          <button type="button" class="pad-btn drift" data-pad="drift" aria-label="Derrapar">
+            <span class="drift-ring" id="pad-drift-ring" aria-hidden="true"></span>
+            <span class="pad-label">Derrapa</span>
+          </button>
           <button type="button" class="pad-btn accel" data-pad="throttle" aria-label="Acelerar"><span class="pad-label">Acelera</span></button>
         </div>
       </div>
@@ -290,6 +299,10 @@ export class UI {
     trackName: string;
     smoke?: boolean;
     boost?: boolean;
+    driftCharge?: number;
+    drifting?: boolean;
+    gapText?: string | null;
+    gapKind?: "ahead" | "lead" | "none";
   }): void {
     const pos = this.root.querySelector("#hud-pos");
     const name = this.root.querySelector("#hud-name");
@@ -298,10 +311,36 @@ export class UI {
     const item = this.root.querySelector("#hud-item");
     const speedBox = this.root.querySelector("#hud-speed");
     const lines = this.root.querySelector("#speedlines");
+    const gap = this.root.querySelector("#hud-gap");
+    const drift = this.root.querySelector("#hud-drift");
+    const driftFill = this.root.querySelector("#hud-drift-fill") as HTMLElement | null;
+    const padRing = this.root.querySelector("#pad-drift-ring") as HTMLElement | null;
     if (pos) pos.textContent = `P${data.place}`;
     if (name) name.textContent = data.trackName;
     if (lap) lap.textContent = `${Math.min(data.laps, data.lap + 1)}/${data.laps}`;
     if (spd) spd.textContent = String(Math.max(0, Math.round(data.speed * 4.6)));
+    if (gap) {
+      const text = data.gapText ?? "—";
+      gap.textContent = text;
+      gap.classList.toggle("gap-ahead", data.gapKind === "ahead");
+      gap.classList.toggle("gap-lead", data.gapKind === "lead");
+      gap.classList.toggle("gap-empty", !data.gapKind || data.gapKind === "none");
+    }
+    const charge = Math.max(0, Math.min(1, data.driftCharge ?? 0));
+    const drifting = !!data.drifting;
+    const ready = charge >= 0.38;
+    if (drift) {
+      drift.classList.toggle("hot", drifting && charge > 0.05);
+      drift.classList.toggle("ready", drifting && ready);
+      drift.classList.toggle("hidden", !drifting && charge < 0.02 && !data.boost);
+    }
+    if (driftFill) driftFill.style.width = `${Math.round(charge * 100)}%`;
+    if (padRing) {
+      const deg = Math.round(charge * 360);
+      padRing.style.setProperty("--charge", `${deg}deg`);
+      padRing.classList.toggle("hot", drifting && charge > 0.05);
+      padRing.classList.toggle("ready", drifting && ready);
+    }
     if (item) {
       const label = data.item ? ITEM_LABEL[data.item] : "VAZIO";
       const was = item.textContent;
@@ -321,6 +360,21 @@ export class UI {
     document.body.classList.toggle("is-boost", boosting);
   }
 
+  /** Persistent race cue for wrong-way / off-asphalt (not the flash banner). */
+  setWayCue(text: string | null, kind: "wrong" | "off" | null = null): void {
+    const el = this.root.querySelector("#way-cue");
+    if (!el) return;
+    if (!text || !kind) {
+      el.classList.add("hidden");
+      el.classList.remove("wrong", "off");
+      el.textContent = "";
+      return;
+    }
+    el.textContent = text;
+    el.classList.remove("hidden", "wrong", "off");
+    el.classList.add(kind);
+  }
+
   setSteerDebug(text: string | null): void {
     const el = this.root.querySelector("#steer-dbg");
     if (!el) return;
@@ -333,7 +387,7 @@ export class UI {
 
   drawMinimap(
     pts: { x: number; z: number }[],
-    racers: { x: number; z: number; you: boolean }[],
+    racers: { x: number; z: number; you: boolean; heading?: number }[],
   ): void {
     const ctx = this.minimap;
     if (!ctx) return;
@@ -376,10 +430,26 @@ export class UI {
       if (!Number.isFinite(r.x) || !Number.isFinite(r.z)) continue;
       const m = map(r.x, r.z);
       if (!Number.isFinite(m.x) || !Number.isFinite(m.y)) continue;
-      ctx.fillStyle = r.you ? "#d4a017" : "#e8edf2";
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, r.you ? 7 : 4, 0, Math.PI * 2);
-      ctx.fill();
+      if (r.you && typeof r.heading === "number" && Number.isFinite(r.heading)) {
+        // Screen Y grows down; track Z maps to Y, so +heading points along mapped tangent.
+        const ang = -r.heading;
+        const len = 14;
+        ctx.fillStyle = "#d4a017";
+        ctx.beginPath();
+        ctx.moveTo(m.x + Math.sin(ang) * len, m.y - Math.cos(ang) * len);
+        ctx.lineTo(m.x + Math.cos(ang) * 7, m.y + Math.sin(ang) * 7);
+        ctx.lineTo(m.x - Math.cos(ang) * 7, m.y - Math.sin(ang) * 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,230,140,0.9)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = r.you ? "#d4a017" : "#e8edf2";
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, r.you ? 7 : 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -429,7 +499,7 @@ export class UI {
     if (!el) return;
     window.clearTimeout(this.tipTimer);
     el.textContent =
-      "Dirija com A/D ou o stick · Segure Derrapa (Shift) na curva e solte limpo pro turbo";
+      "Stick à esquerda · Segure Derrapa na curva e solte limpo pro turbo · Toque o slot dourado pra usar o item";
     el.classList.remove("hidden");
     this.tipVisible = true;
     if (ms > 0) {
