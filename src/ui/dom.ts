@@ -150,8 +150,8 @@ export class UI {
           <div class="eyebrow">Como dirigir</div>
           <h2>Controles</h2>
           <div class="sheet">
-            <p><b>No celular:</b> à esquerda o direcional. À direita: <b>Acelera</b>, <b>Derrapa</b> e <b>Item</b>. Segure Acelera pra andar; solte pra ir freando sozinho. Segure Derrapa nas curvas pra carregar turbo.</p>
-            <p><b>No teclado:</b> W ou ↑ acelera · A D dirige · Shift (ou Espaço) derrapa · E usa o item · Esc ou P pausa.</p>
+            <p><b>No celular:</b> à esquerda o direcional. À direita: <b>Acelera</b>, <b>Freia</b>, <b>Derrapa</b> e <b>Item</b>. Segure Acelera pra andar; Freia nas curvas fechadas. Segure Derrapa pra carregar turbo.</p>
+            <p><b>No teclado:</b> W ou ↑ acelera · S ou ↓ freia · A D dirige · Shift (ou Espaço) derrapa · E usa o item · Esc ou P pausa.</p>
             <p>Caixas douradas no asfalto enchem o slot de item. Use na hora certa.</p>
             <p><b>Disco Ímã</b> segue a fita da pista e busca quem está à frente. <b>Sabão</b> deixa uma poça escorregadia atrás. <b>Carga Turbo</b> empurra. <b>Fuligem</b> cega e atrasa quem vem atrás. <b>Gancho</b> puxa a próxima caixa dourada.</p>
           </div>
@@ -252,7 +252,14 @@ export class UI {
         </div>
         <div class="hud-tr">
           <div class="hud-tr-row">
-            <div class="lap-box"><div class="kicker">Volta</div><div class="num" id="hud-lap">1/3</div></div>
+            <div class="lap-box" id="hud-lap-box">
+              <div class="kicker" id="hud-lap-kicker">Volta</div>
+              <div class="num" id="hud-lap">1/3</div>
+              <div class="time-box" id="hud-times" aria-live="polite">
+                <span class="time-cur" id="hud-lap-time">0:00.00</span>
+                <span class="time-best" id="hud-best-time">melhor —</span>
+              </div>
+            </div>
             <button type="button" class="icon-btn pause-btn" data-act="pause" aria-label="Pausa">II</button>
           </div>
           <div class="hud-map">
@@ -281,6 +288,7 @@ export class UI {
             <span class="drift-ring" id="pad-drift-ring" aria-hidden="true"></span>
             <span class="pad-label">Derrapa</span>
           </button>
+          <button type="button" class="pad-btn brake" data-pad="brake" aria-label="Frear"><span class="pad-label">Freia</span></button>
           <button type="button" class="pad-btn accel" data-pad="throttle" aria-label="Acelerar"><span class="pad-label">Acelera</span></button>
         </div>
       </div>
@@ -303,10 +311,17 @@ export class UI {
     drifting?: boolean;
     gapText?: string | null;
     gapKind?: "ahead" | "lead" | "none";
+    lapTime?: number;
+    bestLap?: number;
+    lastLap?: boolean;
   }): void {
     const pos = this.root.querySelector("#hud-pos");
     const name = this.root.querySelector("#hud-name");
     const lap = this.root.querySelector("#hud-lap");
+    const lapBox = this.root.querySelector("#hud-lap-box");
+    const lapKick = this.root.querySelector("#hud-lap-kicker");
+    const lapTimeEl = this.root.querySelector("#hud-lap-time");
+    const bestEl = this.root.querySelector("#hud-best-time");
     const spd = this.root.querySelector("#hud-spd");
     const item = this.root.querySelector("#hud-item");
     const speedBox = this.root.querySelector("#hud-speed");
@@ -317,7 +332,17 @@ export class UI {
     const padRing = this.root.querySelector("#pad-drift-ring") as HTMLElement | null;
     if (pos) pos.textContent = `P${data.place}`;
     if (name) name.textContent = data.trackName;
-    if (lap) lap.textContent = `${Math.min(data.laps, data.lap + 1)}/${data.laps}`;
+    const lapDisp = Math.min(data.laps, data.lap + 1);
+    if (lap) lap.textContent = `${lapDisp}/${data.laps}`;
+    const last = !!data.lastLap;
+    lapBox?.classList.toggle("last-lap", last);
+    if (lapKick) lapKick.textContent = last ? "Última" : "Volta";
+    if (lapTimeEl) lapTimeEl.textContent = formatTime(data.lapTime ?? 0);
+    if (bestEl) {
+      const best = data.bestLap ?? Infinity;
+      bestEl.textContent = Number.isFinite(best) ? `melhor ${formatTime(best)}` : "melhor —";
+      bestEl.classList.toggle("has-best", Number.isFinite(best));
+    }
     if (spd) spd.textContent = String(Math.max(0, Math.round(data.speed * 4.6)));
     if (gap) {
       const text = data.gapText ?? "—";
@@ -342,10 +367,19 @@ export class UI {
       padRing.classList.toggle("ready", drifting && ready);
     }
     if (item) {
-      const label = data.item ? ITEM_LABEL[data.item] : "VAZIO";
+      const glyphs: Record<ItemId, string> = {
+        puck: "◎ Disco",
+        soap: "≈ Sabão",
+        turbo: "» Turbo",
+        soot: "▓ Fuligem",
+        hook: "⌖ Gancho",
+      };
+      const label = data.item ? glyphs[data.item] ?? ITEM_LABEL[data.item] : "VAZIO";
       const was = item.textContent;
       item.textContent = label;
       item.classList.toggle("armed", !!data.item);
+      if (data.item) item.setAttribute("data-item", data.item);
+      else item.removeAttribute("data-item");
       if (data.item && label !== was) {
         item.classList.remove("flash");
         void (item as HTMLElement).offsetWidth;
@@ -426,6 +460,27 @@ export class UI {
     });
     ctx.closePath();
     ctx.stroke();
+    // Start / finish chevron at first sample (progress ≈ 0).
+    if (finitePts.length >= 2) {
+      const a = map(finitePts[0].x, finitePts[0].z);
+      const b = map(finitePts[1].x, finitePts[1].z);
+      if (Number.isFinite(a.x) && Number.isFinite(b.x)) {
+        const ang = Math.atan2(b.y - a.y, b.x - a.x);
+        const nx = Math.cos(ang + Math.PI / 2);
+        const ny = Math.sin(ang + Math.PI / 2);
+        const half = 10;
+        ctx.strokeStyle = "rgba(255, 230, 120, 0.95)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(a.x - nx * half, a.y - ny * half);
+        ctx.lineTo(a.x + nx * half, a.y + ny * half);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255, 210, 80, 0.95)";
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     for (const r of racers) {
       if (!Number.isFinite(r.x) || !Number.isFinite(r.z)) continue;
       const m = map(r.x, r.z);
@@ -499,7 +554,7 @@ export class UI {
     if (!el) return;
     window.clearTimeout(this.tipTimer);
     el.textContent =
-      "Stick à esquerda · Segure Derrapa na curva e solte limpo pro turbo · Toque o slot dourado pra usar o item";
+      "Stick à esquerda · Freia nas curvas fechadas · Segure Derrapa e solte limpo pro turbo · Toque o slot pra usar o item";
     el.classList.remove("hidden");
     this.tipVisible = true;
     if (ms > 0) {
@@ -568,8 +623,8 @@ export class UI {
         <h2>${title}</h2>
         ${note}
         <div class="sheet" style="margin-top:10px">
-          <p><b>Celular:</b> esquerda = direção. Direita = Acelera, Derrapa e Item.</p>
-          <p><b>Teclado:</b> W acelera · A D dirige · Shift derrapa · E item · Esc/P pausa.</p>
+          <p><b>Celular:</b> esquerda = direção. Direita = Acelera, Freia, Derrapa e Item.</p>
+          <p><b>Teclado:</b> W acelera · S freia · A D dirige · Shift derrapa · E item · Esc/P pausa.</p>
         </div>
         <div class="stack">
           <button type="button" class="btn primary" data-act="resume">Continuar</button>
