@@ -631,6 +631,8 @@ export class Game {
       this.race.update(dt, this.input, this.camera);
       const p = this.race.player;
       const gap = this.rivalGap(p);
+      const lapTime = Math.max(0, this.race.elapsed - (p.lastLapTime || 0));
+      const lastLap = p.kart.lap === this.race.laps - 1 && !p.kart.finished;
       this.ui.updateHud({
         place: p.place,
         lap: p.kart.lap,
@@ -644,21 +646,27 @@ export class Game {
         drifting: p.kart.drifting,
         gapText: gap.text,
         gapKind: gap.kind,
+        lapTime,
+        bestLap: p.bestLap,
+        lastLap,
       });
       this.updateWayCue(p.kart, dt);
       if (p.item && p.item !== this.lastHudItem) {
         this.ui.banner(ITEM_LABEL[p.item], 650);
         this.ui.softFlash("pickup");
         this.ui.scorePop(ITEM_LABEL[p.item]);
+        if (navigator.vibrate) navigator.vibrate(8);
       }
       this.lastHudItem = p.item;
       if (p.kart.lap > this.lastHudLap) {
         if (this.lastHudLap >= 0 && p.kart.lap < this.race.laps) {
           this.audio.lap();
-          this.ui.banner(`VOLTA ${p.kart.lap + 1}/${this.race.laps}`, 900);
+          const enteringLast = p.kart.lap === this.race.laps - 1;
+          this.ui.banner(enteringLast ? "ÚLTIMA VOLTA!" : `VOLTA ${p.kart.lap + 1}/${this.race.laps}`, enteringLast ? 1200 : 900);
           this.race.fx.spawnLapBurst(p.kart);
           this.ui.softFlash("lap");
-          this.ui.scorePop(`VOLTA ${p.kart.lap + 1}`);
+          this.ui.scorePop(enteringLast ? "ÚLTIMA!" : `VOLTA ${p.kart.lap + 1}`);
+          if (enteringLast && navigator.vibrate) navigator.vibrate([18, 40, 18]);
         }
         this.lastHudLap = p.kart.lap;
       }

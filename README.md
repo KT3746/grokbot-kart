@@ -2,7 +2,7 @@
 
 Corrida de kart **original** no navegador. Câmera de perseguição, asfalto com peso, drift que vale turbo e itens que mudam a prova — inspirada no gênero, sem qualquer personagem, item ou pista da Nintendo.
 
-**Jogar agora:** [https://kt3746.github.io/grokbot-kart/?v=202610051930](https://kt3746.github.io/grokbot-kart/?v=202610051930)
+**Jogar agora:** [https://kt3746.github.io/grokbot-kart/?v=202610060445](https://kt3746.github.io/grokbot-kart/?v=202610060445)
 
 ## Como jogar
 
@@ -27,12 +27,12 @@ O jogo detecta PC e celular sozinho. Controles na tela aparecem se a janela for 
 | Usar item | E ou Ctrl |
 | Pausa | Esc |
 
-Segure o drift numa curva e solte **limpo** (sem bater no muro) para um turbo curto. O campo de visão e o motor respondem.
+Segure o drift numa curva e solte **limpo** (sem bater no muro) para um turbo curto. Use o freio (S / Freia) nas curvas fechadas. O HUD mostra tempo da volta e melhor volta; na última volta o placar pulsa.
 
 ### Toque (iPhone / Android)
 
 - **Esquerda:** direcional (arraste).
-- **Direita:** Acelera, Freio, Drift, Item.
+- **Direita:** Acelera, Freia, Derrapa e Item.
 
 A página **não trava o scroll nos menus** (você consegue ver Voltar e Continuar). Durante a corrida o scroll fica bloqueado para o toque não empurrar a página. Não depende de pointer lock nem de WebGPU.
 
@@ -88,7 +88,7 @@ npm run preview
 
 O workflow em `.github/workflows/deploy.yml` gera o site e publica no GitHub Pages a cada push em `main`. Depois do primeiro merge, ative Pages em **Settings → Pages → GitHub Actions**.
 
-Depois de cada visual/deploy, abra com cache-bust `?v=YYYYMMDDHHMM` (horário de São Paulo), por exemplo `?v=202610051930`.
+Depois de cada visual/deploy, abra com cache-bust `?v=YYYYMMDDHHMM` (horário de São Paulo), por exemplo `?v=202610060445`.
 
 ## Licença
 

@@ -1,7 +1,7 @@
 {
   "name": "grokbot-kart",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "KART — corrida de kart original no navegador",
   "scripts": {

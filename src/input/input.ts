@@ -231,8 +231,11 @@ export class Input {
     const playerRight = fromKeys !== 0 ? fromKeys : stickLive ? this.steerTouch : 0;
     const shift =
       k.has("ShiftLeft") || k.has("ShiftRight") || k.has("Space");
+    const down = k.has("ArrowDown") || k.has("KeyS");
     this.state.throttle = this.pad.throttle || up ? 1 : 0;
-    this.state.brake = 0;
+    this.state.brake = this.pad.brake || down ? 1 : 0;
+    // Freio cancela aceleração (hairpin no celular).
+    if (this.state.brake > 0) this.state.throttle = 0;
     this.state.steer = steerFromPlayerRight(playerRight);
     this.state.drift = this.pad.drift || shift;
     this.state.item = this.itemPressed;
