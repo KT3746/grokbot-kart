@@ -36,6 +36,8 @@ export class UI {
   private tipVisible = false;
   private flashTimer = 0;
   private scorePopTimer = 0;
+  private coachTimer = 0;
+  private placeFlashTimer = 0;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -126,7 +128,7 @@ export class UI {
             <div class="brand">
               <div class="eyebrow">Corrida de kart original</div>
               <h1>KART</h1>
-              <p class="lede">Terceira pessoa, asfalto com peso, itens que mudam a prova. Sem mascote emprestado — só o grid e a noite.</p>
+              <p class="lede">Terceira pessoa, asfalto com peso, itens que mudam a prova. Sem mascote emprestado: só o grid e a noite.</p>
               <p class="daily-meta" role="status">${meta}</p>
             </div>
             <button type="button" class="icon-btn mute-btn" data-act="mute" aria-label="${muted ? "Ativar som" : "Mudo"}">${muted ? "Mudo" : "Som"}</button>
@@ -169,7 +171,7 @@ export class UI {
           <div class="eyebrow">Ficha técnica</div>
           <h2>Créditos</h2>
           <div class="sheet">
-            <p><b>KART</b> é um jogo original de corrida no navegador. Inspirado no gênero — câmera de perseguição, caixas, caos justo — com nomes, silhuetas e itens próprios.</p>
+            <p><b>KART</b> é um jogo original de corrida no navegador. Inspirado no gênero (câmera de perseguição, caixas, caos justo) com nomes, silhuetas e itens próprios.</p>
             <p>Three.js · WebGL · áudio procedural. Feito para desktop e Safari no iPhone.</p>
             <p>MIT · KT3746</p>
           </div>
@@ -233,7 +235,8 @@ export class UI {
   }
 
   stripRaceChrome(): void {
-    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .way-cue, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop").forEach((n) => n.remove());
+    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .way-cue, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop, .drift-veil, .coach-cue, .speedlines").forEach((n) => n.remove());
+    this.hideCoach();
     this.minimap = null;
     this.countdownEl = null;
     this.hideRaceTip();
@@ -243,8 +246,8 @@ export class UI {
     this.set(`
       <div class="hud">
         <div class="hud-tl">
-          <div class="pos"><span id="hud-pos">P–</span><small id="hud-name">—</small></div>
-          <div class="gap-box" id="hud-gap" aria-live="polite">—</div>
+          <div class="pos pos-plate" id="hud-pos-wrap"><span id="hud-pos">P-</span><small id="hud-name">-</small></div>
+          <div class="gap-box" id="hud-gap" aria-live="polite">-</div>
           <div class="drift-meter hidden" id="hud-drift" aria-hidden="true">
             <div class="drift-meter-fill" id="hud-drift-fill"></div>
             <span class="drift-meter-label">TURBO</span>
@@ -257,7 +260,7 @@ export class UI {
               <div class="num" id="hud-lap">1/3</div>
               <div class="time-box" id="hud-times" aria-live="polite">
                 <span class="time-cur" id="hud-lap-time">0:00.00</span>
-                <span class="time-best" id="hud-best-time">melhor —</span>
+                <span class="time-best" id="hud-best-time">melhor -</span>
               </div>
             </div>
             <button type="button" class="icon-btn pause-btn" data-act="pause" aria-label="Pausa">II</button>
@@ -276,12 +279,14 @@ export class UI {
       <div class="banner hidden" id="banner"></div>
       <div class="way-cue hidden" id="way-cue" role="status" aria-live="assertive"></div>
       <div class="race-tip hidden" id="race-tip" data-fun4-tip="1" role="status" aria-live="polite"></div>
+      <div class="coach-cue hidden" id="coach-cue" role="status" aria-live="polite"></div>
       <div class="soft-flash hidden" id="soft-flash" aria-hidden="true"></div>
       <div class="score-pop hidden" id="score-pop" aria-hidden="true"></div>
       <div class="speedlines hidden" id="speedlines" aria-hidden="true"></div>
+      <div class="drift-veil hidden" id="drift-veil" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
       <div class="touch" id="touch">
-        <div class="zone stick-wrap stick-ghost" aria-label="Direção"><div class="stick-base"></div><div class="stick-knob"></div></div>
+        <div class="zone stick-wrap stick-ghost stick-xl" aria-label="Direção"><div class="stick-hit"></div><div class="stick-base"></div><div class="stick-knob"></div></div>
         <div class="zone pad-right pad-row">
           <button type="button" class="pad-btn item" data-pad="item" aria-label="Usar item"><span class="pad-label">Item</span></button>
           <button type="button" class="pad-btn drift" data-pad="drift" aria-label="Derrapar">
@@ -340,12 +345,12 @@ export class UI {
     if (lapTimeEl) lapTimeEl.textContent = formatTime(data.lapTime ?? 0);
     if (bestEl) {
       const best = data.bestLap ?? Infinity;
-      bestEl.textContent = Number.isFinite(best) ? `melhor ${formatTime(best)}` : "melhor —";
+      bestEl.textContent = Number.isFinite(best) ? `melhor ${formatTime(best)}` : "melhor -";
       bestEl.classList.toggle("has-best", Number.isFinite(best));
     }
     if (spd) spd.textContent = String(Math.max(0, Math.round(data.speed * 4.6)));
     if (gap) {
-      const text = data.gapText ?? "—";
+      const text = data.gapText ?? "-";
       gap.textContent = text;
       gap.classList.toggle("gap-ahead", data.gapKind === "ahead");
       gap.classList.toggle("gap-lead", data.gapKind === "lead");
@@ -554,7 +559,7 @@ export class UI {
     if (!el) return;
     window.clearTimeout(this.tipTimer);
     el.textContent =
-      "Stick à esquerda · Freia nas curvas fechadas · Segure Derrapa e solte limpo pro turbo · Toque o slot pra usar o item";
+      "Stick à esquerda · Freia nas curvas · Segure Derrapa e solte limpo = turbo · Toque o slot dourado pra usar o item";
     el.classList.remove("hidden");
     this.tipVisible = true;
     if (ms > 0) {
@@ -595,6 +600,57 @@ export class UI {
     }, 780);
   }
 
+  /** Onda 5: véu lateral de drift (roxo) / pronto (dourado). */
+  setDriftJuice(drifting: boolean, ready: boolean, charge: number): void {
+    const el = this.root.querySelector("#drift-veil");
+    if (!el) return;
+    if (!drifting && charge < 0.02) {
+      el.classList.add("hidden");
+      el.classList.remove("hot", "ready");
+      return;
+    }
+    el.classList.remove("hidden");
+    el.classList.toggle("hot", drifting && !ready);
+    el.classList.toggle("ready", ready);
+    (el as HTMLElement).style.setProperty("--drift-a", String(Math.max(0.2, Math.min(1, charge))));
+  }
+
+  /** Onda 5: coach curto do primeiro minuto / pós-largada. */
+  showCoach(text: string, ms = 4000): void {
+    const el = this.root.querySelector("#coach-cue");
+    if (!el) return;
+    window.clearTimeout(this.coachTimer);
+    el.textContent = text;
+    el.classList.remove("hidden", "pop");
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add("pop");
+    el.classList.remove("hidden");
+    if (ms > 0) {
+      this.coachTimer = window.setTimeout(() => this.hideCoach(), ms);
+    }
+  }
+
+  hideCoach(): void {
+    window.clearTimeout(this.coachTimer);
+    this.coachTimer = 0;
+    const el = this.root.querySelector("#coach-cue");
+    if (!el) return;
+    el.classList.add("hidden");
+    el.classList.remove("pop");
+    el.textContent = "";
+  }
+
+  /** Flash no placar quando sobe de posição. */
+  flashPlaceUp(): void {
+    const wrap = this.root.querySelector("#hud-pos-wrap");
+    if (!wrap) return;
+    window.clearTimeout(this.placeFlashTimer);
+    wrap.classList.remove("place-up");
+    void (wrap as HTMLElement).offsetWidth;
+    wrap.classList.add("place-up");
+    this.placeFlashTimer = window.setTimeout(() => wrap.classList.remove("place-up"), 720);
+  }
+
   hideRaceTip(): void {
     window.clearTimeout(this.tipTimer);
     this.tipTimer = 0;
@@ -615,7 +671,7 @@ export class UI {
     const eyebrow = fromVis ? "App em segundo plano" : "Prova interrompida";
     const title = fromVis ? "Pausado" : "Pausa";
     const note = fromVis
-      ? `<p class="pause-note"><b>Tela oculta</b> — a corrida pausou sozinha. Toque <b>Continuar</b> pra voltar.</p>`
+      ? `<p class="pause-note"><b>Tela oculta</b>: a corrida pausou sozinha. Toque <b>Continuar</b> pra voltar.</p>`
       : "";
     wrap.innerHTML = `
       <div class="panel${fromVis ? " pause-bg" : ""}">

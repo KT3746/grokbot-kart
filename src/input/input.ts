@@ -129,11 +129,17 @@ export class Input {
     }
 
     if (stick && knob) {
+      // Onda 5: zona maior + curva com menos deadzone (Galaxy thumb).
       const update = (cx: number) => {
         const r = stick.getBoundingClientRect();
-        const x = (cx - (r.left + r.width / 2)) / (r.width * 0.5);
-        this.steerTouch = clamp(x, -1, 1);
-        knob.style.transform = `translate(${clamp(x, -1, 1) * 42}px, 0px)`;
+        const raw = (cx - (r.left + r.width / 2)) / (r.width * 0.42);
+        let x = clamp(raw, -1, 1);
+        // Pow < 1: mais resposta perto do centro (toque curto já vira).
+        const mag = Math.pow(Math.abs(x), 0.72);
+        x = Math.sign(x) * mag;
+        if (Math.abs(x) < 0.04) x = 0;
+        this.steerTouch = x;
+        knob.style.transform = `translate(${clamp(raw, -1, 1) * 48}px, 0px)`;
       };
       stick.addEventListener("pointerdown", (e) => {
         e.preventDefault();
@@ -146,6 +152,7 @@ export class Input {
           /* capture is optional */
         }
         update(e.clientX);
+        if (navigator.vibrate) navigator.vibrate(5);
       });
       stick.addEventListener("pointermove", (e) => {
         if (this.steerPointer === e.pointerId) update(e.clientX);
@@ -165,6 +172,9 @@ export class Input {
           this.padPointers.set(e.pointerId, name);
           setPad(name, true);
           if (name === "item") this.itemPressed = true;
+          if (navigator.vibrate) {
+            navigator.vibrate(name === "drift" ? 8 : name === "brake" ? 7 : 5);
+          }
           try {
             el.setPointerCapture(e.pointerId);
           } catch {

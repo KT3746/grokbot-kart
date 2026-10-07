@@ -17,6 +17,7 @@ import { dailyMetaLine, recordRaceFinish } from "../meta/daily";
 const MENU_CLEAR = 0x0b1018;
 const RACE_CLEAR = 0x152038;
 const RACE_TIP_KEY = "kart-race-tip-v1";
+const COACH_KEY = "kart-coach-v5";
 
 type View = "title" | "karts" | "tracks" | "race" | "results" | "standings" | "controls" | "credits";
 
@@ -35,6 +36,11 @@ export class Game {
   private lastPlace = 0;
   private lastHudItem: ItemId | null | undefined = undefined;
   private tipArmed = false;
+  private wasDrifting = false;
+  private wasDriftReady = false;
+  private coachArmed = false;
+  private coachStep = 0;
+  private coachTimer = 0;
   private wayCueKind: "wrong" | "off" | null = null;
   private wayCueHold = 0;
   cup = new Championship();
@@ -495,6 +501,13 @@ export class Game {
         this.ui.setCountdown("VAI!");
         this.ui.banner("LARGADA!", 700);
         setTimeout(() => this.ui.setCountdown(null), 780);
+        // Onda 5: hook do primeiro minuto (sempre, curto)
+        this.ui.showCoach("Segure ACELERA · stick pra virar", 3800);
+        if (navigator.vibrate) navigator.vibrate(18);
+        if (this.coachArmed) {
+          this.coachStep = 1;
+          this.coachTimer = 3.8;
+        }
       }
       if (kind === "item") {
         this.audio.item();
@@ -538,6 +551,11 @@ export class Game {
     this.wayCueHold = 0;
     this.ui.setWayCue(null);
     this.tipArmed = false;
+    this.wasDrifting = false;
+    this.wasDriftReady = false;
+    this.coachArmed = false;
+    this.coachStep = 0;
+    this.coachTimer = 0;
     try {
       if (!localStorage.getItem(RACE_TIP_KEY)) {
         this.tipArmed = true;
@@ -545,9 +563,13 @@ export class Game {
         // Mark seen on first show so it only appears once (even if they quit mid-tip).
         localStorage.setItem(RACE_TIP_KEY, "1");
       }
+      if (!localStorage.getItem(COACH_KEY)) {
+        this.coachArmed = true;
+      }
     } catch {
       this.tipArmed = true;
       this.ui.showRaceTip(58000);
+      this.coachArmed = true;
     }
     this.syncChrome();
     this.audio.countdown(3);
@@ -585,7 +607,11 @@ export class Game {
     this.race = null;
     this.audio.silence();
     this.tipArmed = false;
+    this.coachArmed = false;
+    this.coachStep = 0;
     this.ui.hideRaceTip();
+    this.ui.hideCoach();
+    document.body.classList.remove("is-drift", "is-drift-ready");
     this.input.setRaceLock(false);
     this.input.releaseTouch();
     this.camera.clearViewOffset();
@@ -650,6 +676,57 @@ export class Game {
         bestLap: p.bestLap,
         lastLap,
       });
+      // Onda 5: feedback háptico/visual de drift
+      const drifting = !!p.kart.drifting;
+      const charge = p.kart.driftCharge;
+      const ready = drifting && charge >= 0.38;
+      document.body.classList.toggle("is-drift", drifting);
+      document.body.classList.toggle("is-drift-ready", ready);
+      this.ui.setDriftJuice(drifting, ready, charge);
+      if (drifting && !this.wasDrifting) {
+        if (navigator.vibrate) navigator.vibrate(12);
+      }
+      if (ready && !this.wasDriftReady) {
+        if (navigator.vibrate) navigator.vibrate([8, 40, 12]);
+        this.ui.scorePop("TURBO PRONTO");
+      }
+      this.wasDrifting = drifting;
+      this.wasDriftReady = ready;
+
+      // Onda 5: coach progressivo (primeira corrida)
+      if (this.coachArmed && this.coachStep > 0 && !this.race.paused) {
+        this.coachTimer = Math.max(0, this.coachTimer - dt);
+        if (this.coachStep === 1 && this.coachTimer <= 0) {
+          if (this.input.state.throttle > 0.35) {
+            this.ui.showCoach("Curva: DERRAPA + stick", 5200);
+            this.coachStep = 2;
+            this.coachTimer = 5.2;
+          } else {
+            this.ui.showCoach("Segure ACELERA pra andar", 2800);
+            this.coachTimer = 2.8;
+          }
+        } else if (this.coachStep === 2) {
+          if (drifting || ready) {
+            this.ui.showCoach("Solte limpo = TURBO!", 4200);
+            this.coachStep = 3;
+            this.coachTimer = 4.2;
+          } else if (this.coachTimer <= 0) {
+            this.coachStep = 4;
+          }
+        } else if (this.coachStep === 3 && this.coachTimer <= 0) {
+          this.coachStep = 4;
+        }
+        if (this.coachStep >= 4) {
+          this.coachArmed = false;
+          this.ui.hideCoach();
+          try {
+            localStorage.setItem(COACH_KEY, "1");
+          } catch {
+            /* ok */
+          }
+        }
+      }
+
       this.updateWayCue(p.kart, dt);
       if (p.item && p.item !== this.lastHudItem) {
         this.ui.banner(ITEM_LABEL[p.item], 650);
@@ -672,7 +749,9 @@ export class Game {
       }
       if (this.lastPlace && p.place < this.lastPlace) {
         this.ui.banner(p.place === 1 ? "LIDERANÇA!" : `SOBE PRA P${p.place}!`, 700);
+        this.ui.flashPlaceUp();
         this.audio.blip(520, 0.1, "triangle");
+        if (navigator.vibrate) navigator.vibrate(10);
       }
       this.lastPlace = p.place;
       this.ui.drawMinimap(

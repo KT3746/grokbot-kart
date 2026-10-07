@@ -1,8 +1,8 @@
 # KART
 
-Corrida de kart **original** no navegador. Câmera de perseguição, asfalto com peso, drift que vale turbo e itens que mudam a prova — inspirada no gênero, sem qualquer personagem, item ou pista da Nintendo.
+Corrida de kart **original** no navegador. Câmera de perseguição, asfalto com peso, drift que vale turbo e itens que mudam a prova - inspirada no gênero, sem qualquer personagem, item ou pista da Nintendo.
 
-**Jogar agora:** [https://kt3746.github.io/grokbot-kart/?v=202610060445](https://kt3746.github.io/grokbot-kart/?v=202610060445)
+**Jogar agora:** [https://kt3746.github.io/grokbot-kart/?v=202610070311](https://kt3746.github.io/grokbot-kart/?v=202610070311)
 
 ## Como jogar
 
@@ -38,16 +38,16 @@ A página **não trava o scroll nos menus** (você consegue ver Voltar e Continu
 
 ## Modos
 
-- **Corrida rápida** — escolhe kart e pista, 3 voltas, quatro karts no grid (você + 3 adversários).
-- **Campeonato curto** — Orla da Garoa → Serra do Vapor → Beco das Lanternas. Pontos 10 / 7 / 5 / 3. No fim, classificação e troféu.
+- **Corrida rápida** - escolhe kart e pista, 3 voltas, quatro karts no grid (você + 3 adversários).
+- **Campeonato curto** - Orla da Garoa → Serra do Vapor → Beco das Lanternas. Pontos 10 / 7 / 5 / 3. No fim, classificação e troféu.
 
 ## Karts
 
 | Kart | Papel |
 | --- | --- |
-| Vespa Relâmpago | Ágil — entra tarde, sai cedo |
+| Vespa Relâmpago | Ágil - entra tarde, sai cedo |
 | Cometa Rubi | Equilibrado |
-| Guardião Ferro | Pesado — reta e presença |
+| Guardião Ferro | Pesado - reta e presença |
 | Zíper Noturno | Especialista em drift |
 
 ## Pistas
@@ -62,11 +62,11 @@ Sair do asfalto **segura** o kart. Atalho é mais curto, com menos aderência.
 
 ## Itens
 
-- **Disco Ímã** — projétil que segue a fita da pista e procura quem está à frente.
-- **Sabão industrial** — poça escorregadia que você deixa para trás.
-- **Carga Turbo** — empurrão curto.
-- **Cortina de fuligem** — nuvem que atrasa quem vem atrás.
-- **Gancho de caixa** — aumenta o alcance para a próxima caixa.
+- **Disco Ímã** - projétil que segue a fita da pista e procura quem está à frente.
+- **Sabão industrial** - poça escorregadia que você deixa para trás.
+- **Carga Turbo** - empurrão curto.
+- **Cortina de fuligem** - nuvem que atrasa quem vem atrás.
+- **Gancho de caixa** - aumenta o alcance para a próxima caixa.
 
 ## Rodar localmente
 
@@ -88,7 +88,7 @@ npm run preview
 
 O workflow em `.github/workflows/deploy.yml` gera o site e publica no GitHub Pages a cada push em `main`. Depois do primeiro merge, ative Pages em **Settings → Pages → GitHub Actions**.
 
-Depois de cada visual/deploy, abra com cache-bust `?v=YYYYMMDDHHMM` (horário de São Paulo), por exemplo `?v=202610060445`.
+Depois de cada visual/deploy, abra com cache-bust `?v=YYYYMMDDHHMM` (horário de São Paulo), por exemplo `?v=202610070311`.
 
 ## Licença
 
