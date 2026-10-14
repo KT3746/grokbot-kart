@@ -38,6 +38,8 @@ export class Game {
   private tipArmed = false;
   private wasDrifting = false;
   private wasDriftReady = false;
+  private wasBoost = false;
+  private lastBest = Infinity;
   private coachArmed = false;
   private coachStep = 0;
   private coachTimer = 0;
@@ -553,6 +555,8 @@ export class Game {
     this.tipArmed = false;
     this.wasDrifting = false;
     this.wasDriftReady = false;
+    this.wasBoost = false;
+    this.lastBest = Infinity;
     this.coachArmed = false;
     this.coachStep = 0;
     this.coachTimer = 0;
@@ -727,6 +731,22 @@ export class Game {
         }
       }
 
+      // Onda 6: explosão de turbo, recorde de volta e ponteiro de velocidade
+      const boostingNow = p.kart.boostTime > 0;
+      if (boostingNow && !this.wasBoost) {
+        this.ui.turboBurst();
+        if (navigator.vibrate) navigator.vibrate([6, 20, 14]);
+      }
+      this.wasBoost = boostingNow;
+      const bestNow = p.bestLap ?? Infinity;
+      if (Number.isFinite(bestNow) && bestNow < this.lastBest) {
+        if (Number.isFinite(this.lastBest)) {
+          this.ui.lapRecord();
+          this.audio.blip(880, 0.14, "triangle");
+          if (navigator.vibrate) navigator.vibrate([10, 30, 10, 30, 20]);
+        }
+        this.lastBest = bestNow;
+      }
       this.updateWayCue(p.kart, dt);
       if (p.item && p.item !== this.lastHudItem) {
         this.ui.banner(ITEM_LABEL[p.item], 650);
