@@ -270,7 +270,7 @@ export class UI {
           </div>
         </div>
         <div class="hud-bot">
-          <div class="speed-box" id="hud-speed"><div class="kicker">km/h</div><div class="num" id="hud-spd">0</div></div>
+          <div class="speed-box" id="hud-speed"><div class="kicker">km/h</div><div class="num" id="hud-spd">0</div><div class="spd-bar" aria-hidden="true"><i id="hud-spd-fill"></i></div></div>
           <button type="button" class="item-slot" id="hud-item" data-pad="item" aria-label="Usar item">VAZIO</button>
         </div>
       </div>
@@ -283,6 +283,7 @@ export class UI {
       <div class="soft-flash hidden" id="soft-flash" aria-hidden="true"></div>
       <div class="score-pop hidden" id="score-pop" aria-hidden="true"></div>
       <div class="speedlines hidden" id="speedlines" aria-hidden="true"></div>
+      <div class="turbo-burst hidden" id="turbo-burst" aria-hidden="true"></div>
       <div class="drift-veil hidden" id="drift-veil" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
       <div class="touch" id="touch">
@@ -349,6 +350,12 @@ export class UI {
       bestEl.classList.toggle("has-best", Number.isFinite(best));
     }
     if (spd) spd.textContent = String(Math.max(0, Math.round(data.speed * 4.6)));
+    const spdFill = this.root.querySelector("#hud-spd-fill") as HTMLElement | null;
+    if (spdFill) {
+      const r = Math.max(0, Math.min(1, Math.abs(data.speed) / 30));
+      spdFill.style.width = `${Math.round(r * 100)}%`;
+      spdFill.style.background = `hsl(${Math.round(130 - r * 120)} 90% 55%)`;
+    }
     if (gap) {
       const text = data.gapText ?? "-";
       gap.textContent = text;
@@ -598,6 +605,33 @@ export class UI {
       el.classList.add("hidden");
       el.classList.remove("go");
     }, 780);
+  }
+
+  /** Onda 6: clarão radial + tremida quando o turbo dispara. */
+  turboBurst(): void {
+    const el = this.root.querySelector("#turbo-burst") as HTMLElement | null;
+    if (!el || document.body.classList.contains("reduce-motion")) return;
+    el.classList.remove("hidden", "go");
+    void el.offsetWidth;
+    el.classList.add("go");
+    document.body.classList.remove("turbo-kick");
+    void document.body.offsetWidth;
+    document.body.classList.add("turbo-kick");
+    window.setTimeout(() => {
+      el.classList.add("hidden");
+      el.classList.remove("go");
+      document.body.classList.remove("turbo-kick");
+    }, 560);
+  }
+
+  /** Onda 6: novo recorde de volta — tempo dourado + faixa. */
+  lapRecord(): void {
+    const best = this.root.querySelector("#hud-best-time");
+    best?.classList.remove("record");
+    void (best as HTMLElement | null)?.offsetWidth;
+    best?.classList.add("record");
+    window.setTimeout(() => best?.classList.remove("record"), 1800);
+    this.banner("RECORDE DE VOLTA!", 1100);
   }
 
   /** Onda 5: véu lateral de drift (roxo) / pronto (dourado). */

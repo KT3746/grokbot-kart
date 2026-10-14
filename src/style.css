@@ -1977,3 +1977,16 @@ body:not(.is-race) .coach-cue,
 body:not(.is-race) .drift-veil {
   display: none !important;
 }
+
+/* Onda 6: barra de velocidade, explosão de turbo, recorde */
+.speed-box .spd-bar { height: 5px; margin-top: 4px; border-radius: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+.speed-box .spd-bar i { display: block; height: 100%; width: 0; border-radius: 3px; transition: width .12s linear; box-shadow: 0 0 8px currentColor; }
+.turbo-burst { position: fixed; inset: 0; pointer-events: none; z-index: 6;
+  background: radial-gradient(ellipse at 50% 62%, rgba(255,214,90,.55) 0%, rgba(255,120,40,.25) 28%, transparent 62%); opacity: 0; }
+.turbo-burst.go { animation: turbo-burst .55s ease-out forwards; }
+@keyframes turbo-burst { 0% { opacity: 0; transform: scale(.7); } 18% { opacity: 1; } 100% { opacity: 0; transform: scale(1.35); } }
+body.turbo-kick #scene { animation: turbo-kick .32s ease-out; }
+@keyframes turbo-kick { 0% { transform: scale(1); } 30% { transform: scale(1.035) translateY(-3px); } 100% { transform: scale(1); } }
+#hud-best-time.record { color: #ffd34d !important; text-shadow: 0 0 10px rgba(255,211,77,.9); animation: rec-pulse .45s ease-in-out 3; }
+@keyframes rec-pulse { 50% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .turbo-burst.go, body.turbo-kick #scene, #hud-best-time.record { animation: none; } }
