@@ -184,15 +184,30 @@ export class Game {
   private setupMenuScene(): void {
     this.menuScene.background = new THREE.Color(MENU_CLEAR);
     this.menuScene.fog = new THREE.FogExp2(0x0c1220, 0.01);
-    this.menuScene.add(new THREE.HemisphereLight(0x7a90b8, 0x3a2e20, 1.35));
-    const dir = new THREE.DirectionalLight(0xf2f6fc, 1.35);
+    // Menu showroom: brighter so the kart (and dark tires) read on phone too.
+    this.menuScene.add(new THREE.HemisphereLight(0xb8c8e8, 0x5a4a38, 2.1));
+    this.menuScene.add(new THREE.AmbientLight(0xc8d2e4, 0.85));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.9);
     dir.position.set(-6, 12, 10);
     dir.castShadow = false;
     this.menuScene.add(dir);
-    const fill = new THREE.DirectionalLight(0xffc56a, 0.45);
+    const front = new THREE.DirectionalLight(0xfff1dc, 1.1);
+    front.position.set(5, 3, 8);
+    front.castShadow = false;
+    this.menuScene.add(front);
+    const fill = new THREE.DirectionalLight(0xffc56a, 0.8);
     fill.position.set(8, 4, -6);
     fill.castShadow = false;
     this.menuScene.add(fill);
+    // Rim light from behind/low: outlines the wheels against the dark backdrop.
+    const rim = new THREE.DirectionalLight(0x9fd8ff, 1.6);
+    rim.position.set(-4, 2, -9);
+    rim.castShadow = false;
+    this.menuScene.add(rim);
+    const rimLow = new THREE.DirectionalLight(0xbfe6ff, 0.9);
+    rimLow.position.set(6, 0.6, -7);
+    rimLow.castShadow = false;
+    this.menuScene.add(rimLow);
     if (!isPhoneViewport() && !this.perf.low) {
       const key = new THREE.PointLight(0xffe8b0, 14, 16, 1.6);
       key.position.set(1.4, 2.4, 2.2);
@@ -200,7 +215,7 @@ export class Game {
     }
     const floor = new THREE.Mesh(
       new THREE.CircleGeometry(18, 32),
-      new THREE.MeshLambertMaterial({ color: 0x242830, emissive: 0x101418, emissiveIntensity: 0.35 }),
+      new THREE.MeshLambertMaterial({ color: 0x343a46, emissive: 0x161c24, emissiveIntensity: 0.4 }),
     );
     floor.rotation.x = -Math.PI / 2;
     this.menuScene.add(floor);
@@ -218,6 +233,23 @@ export class Game {
   private swapMenuKart(id: KartId): void {
     if (this.menuKart) this.menuScene.remove(this.menuKart);
     this.menuKart = createKartMesh(getKart(id));
+    // Showroom only: no env map here, so metal reads black. Soften metal and lift tires.
+    this.menuKart.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const m = o.material as THREE.MeshStandardMaterial;
+      if (!m || !(m as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
+      const c = m.clone();
+      if (c.metalness > 0.4) c.metalness = 0.35;
+      const hsl = { h: 0, s: 0, l: 0 };
+      c.color.getHSL(hsl);
+      if (hsl.l < 0.12) {
+        c.color.setRGB(0.07, 0.075, 0.09);
+        c.roughness = 0.6;
+        c.emissive.setRGB(0.02, 0.022, 0.028);
+        c.emissiveIntensity = 1;
+      }
+      o.material = c;
+    });
     this.menuScene.add(this.menuKart);
   }
 
