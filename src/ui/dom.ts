@@ -235,7 +235,7 @@ export class UI {
   }
 
   stripRaceChrome(): void {
-    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .way-cue, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop, .drift-veil, .coach-cue, .speedlines").forEach((n) => n.remove());
+    this.root.querySelectorAll(".hud, .touch, .countdown, .banner, .way-cue, .soot-veil, .pause-btn, .race-tip, .soft-flash, .score-pop, .drift-veil, .coach-cue, .speedlines, .brake-veil, .turbo-burst").forEach((n) => n.remove());
     this.hideCoach();
     this.minimap = null;
     this.countdownEl = null;
@@ -260,6 +260,7 @@ export class UI {
               <div class="num" id="hud-lap">1/3</div>
               <div class="time-box" id="hud-times" aria-live="polite">
                 <span class="time-cur" id="hud-lap-time">0:00.00</span>
+                <span class="time-delta hidden" id="hud-lap-delta" aria-hidden="true">-</span>
                 <span class="time-best" id="hud-best-time">melhor -</span>
               </div>
             </div>
@@ -286,6 +287,7 @@ export class UI {
       <div class="turbo-burst hidden" id="turbo-burst" aria-hidden="true"></div>
       <div class="drift-veil hidden" id="drift-veil" aria-hidden="true"></div>
       <div class="soot-veil hidden" id="soot-veil"></div>
+      <div class="brake-veil hidden" id="brake-veil" aria-hidden="true"></div>
       <div class="touch" id="touch">
         <div class="zone stick-wrap stick-ghost stick-xl" aria-label="Direção"><div class="stick-hit"></div><div class="stick-base"></div><div class="stick-knob"></div></div>
         <div class="zone pad-right pad-row">
@@ -320,6 +322,7 @@ export class UI {
     lapTime?: number;
     bestLap?: number;
     lastLap?: boolean;
+    lapDelta?: number | null;
   }): void {
     const pos = this.root.querySelector("#hud-pos");
     const name = this.root.querySelector("#hud-name");
@@ -348,6 +351,25 @@ export class UI {
       const best = data.bestLap ?? Infinity;
       bestEl.textContent = Number.isFinite(best) ? `melhor ${formatTime(best)}` : "melhor -";
       bestEl.classList.toggle("has-best", Number.isFinite(best));
+    }
+    const deltaEl = this.root.querySelector("#hud-lap-delta") as HTMLElement | null;
+    if (deltaEl) {
+      const d = data.lapDelta;
+      if (d == null || !Number.isFinite(d)) {
+        deltaEl.classList.add("hidden");
+        deltaEl.classList.remove("ahead", "behind");
+        deltaEl.textContent = "-";
+        deltaEl.setAttribute("aria-hidden", "true");
+      } else {
+        const ahead = d <= 0;
+        const abs = Math.abs(d);
+        const txt = `${ahead ? "-" : "+"}${abs.toFixed(2)}`;
+        deltaEl.textContent = txt;
+        deltaEl.classList.remove("hidden");
+        deltaEl.classList.toggle("ahead", ahead);
+        deltaEl.classList.toggle("behind", !ahead);
+        deltaEl.setAttribute("aria-hidden", "false");
+      }
     }
     if (spd) spd.textContent = String(Math.max(0, Math.round(data.speed * 4.6)));
     const spdFill = this.root.querySelector("#hud-spd-fill") as HTMLElement | null;
@@ -647,6 +669,14 @@ export class UI {
     el.classList.toggle("hot", drifting && !ready);
     el.classList.toggle("ready", ready);
     (el as HTMLElement).style.setProperty("--drift-a", String(Math.max(0.2, Math.min(1, charge))));
+  }
+
+  /** Onda 7: véu vermelho ao frear com velocidade. */
+  setBrakeVeil(on: boolean): void {
+    const el = this.root.querySelector("#brake-veil");
+    if (!el) return;
+    el.classList.toggle("hidden", !on);
+    document.body.classList.toggle("is-braking", on);
   }
 
   /** Onda 5: coach curto do primeiro minuto / pós-largada. */
