@@ -533,11 +533,22 @@ export class Game {
       if (kind === "go") {
         this.audio.countdown(0);
         this.ui.setCountdown("VAI!");
-        this.ui.banner("LARGADA!", 700);
+        // Onda 7: largada perfeita se já estiver acelerando no VAI
+        const st = this.input.poll();
+        const perfect = st.throttle > 0.5 && st.brake < 0.2;
+        if (perfect && this.race) {
+          this.race.player.kart.boostTime = Math.max(this.race.player.kart.boostTime, 0.9);
+          this.ui.banner("LARGADA PERFEITA!", 1200);
+          this.ui.turboBurst();
+          this.ui.scorePop("ARRANCADA!");
+          if (navigator.vibrate) navigator.vibrate([14, 30, 18]);
+        } else {
+          this.ui.banner("LARGADA!", 700);
+          if (navigator.vibrate) navigator.vibrate(18);
+        }
         setTimeout(() => this.ui.setCountdown(null), 780);
         // Onda 5: hook do primeiro minuto (sempre, curto)
         this.ui.showCoach("Segure ACELERA · stick pra virar", 3800);
-        if (navigator.vibrate) navigator.vibrate(18);
         if (this.coachArmed) {
           this.coachStep = 1;
           this.coachTimer = 3.8;
@@ -695,6 +706,8 @@ export class Game {
       const gap = this.rivalGap(p);
       const lapTime = Math.max(0, this.race.elapsed - (p.lastLapTime || 0));
       const lastLap = p.kart.lap === this.race.laps - 1 && !p.kart.finished;
+      const bestForDelta = p.bestLap ?? Infinity;
+      const lapDelta = Number.isFinite(bestForDelta) ? lapTime - bestForDelta : null;
       this.ui.updateHud({
         place: p.place,
         lap: p.kart.lap,
@@ -711,7 +724,11 @@ export class Game {
         lapTime,
         bestLap: p.bestLap,
         lastLap,
+        lapDelta,
       });
+      // Onda 7: véu vermelho ao frear com velocidade
+      const brakingHard = this.input.state.brake > 0.4 && Math.abs(p.kart.speed) > 4 && this.race.phase === "green";
+      this.ui.setBrakeVeil(brakingHard);
       // Onda 5: feedback háptico/visual de drift
       const drifting = !!p.kart.drifting;
       const charge = p.kart.driftCharge;
