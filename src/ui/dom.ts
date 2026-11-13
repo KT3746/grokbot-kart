@@ -583,12 +583,14 @@ export class UI {
   }
 
   /** First-minute PT-BR tip (steering/boost) — dismiss on input; caller gates localStorage. */
-  showRaceTip(ms = 58000): void {
+  showRaceTip(ms = 58000, touch = true): void {
     const el = this.root.querySelector("#race-tip");
     if (!el) return;
     window.clearTimeout(this.tipTimer);
-    el.textContent =
-      "Stick à esquerda · Freia nas curvas · Segure Derrapa e solte limpo = turbo · Toque o slot dourado pra usar o item";
+    /* onda 8: dica certa para o aparelho (PC não tem stick nem toque) */
+    el.textContent = touch
+      ? "Stick à esquerda · Freia nas curvas · Segure Derrapa e solte limpo = turbo · Toque o slot dourado pra usar o item"
+      : "↑/W acelera · ←→ ou A D vira · S freia nas curvas · segure Shift e solte limpo = turbo · E usa o item";
     el.classList.remove("hidden");
     this.tipVisible = true;
     if (ms > 0) {
@@ -689,6 +691,7 @@ export class UI {
     void (el as HTMLElement).offsetWidth;
     el.classList.add("pop");
     el.classList.remove("hidden");
+    document.body.classList.add("coach-on"); /* onda 8: uma mensagem por vez */
     if (ms > 0) {
       this.coachTimer = window.setTimeout(() => this.hideCoach(), ms);
     }
@@ -697,6 +700,7 @@ export class UI {
   hideCoach(): void {
     window.clearTimeout(this.coachTimer);
     this.coachTimer = 0;
+    document.body.classList.remove("coach-on");
     const el = this.root.querySelector("#coach-cue");
     if (!el) return;
     el.classList.add("hidden");
@@ -773,7 +777,7 @@ export class UI {
         const you = r.isPlayer ? " you" : "";
         return `<div class="podium-slot place-${r.place}${you}" aria-label="P${r.place} ${r.name}">
           <div class="podium-medal">${medal(r.place)}</div>
-          <div class="podium-name">${r.name}${r.isPlayer ? " · você" : ""}</div>
+          <div class="podium-name">${r.name}${r.isPlayer && r.name !== "Você" ? " · você" : ""}</div>
           <div class="podium-time">${formatTime(r.totalTime)}</div>
         </div>`;
       })
@@ -782,12 +786,31 @@ export class UI {
       .map(
         (r) => `<tr class="${r.isPlayer ? "you" : ""}">
         <td><span class="place-pill place-${r.place}">${medal(r.place)}</span></td>
-        <td>${r.name}${r.isPlayer ? " (você)" : ""}</td>
+        <td>${r.name}${r.isPlayer && r.name !== "Você" ? " (você)" : ""}</td>
         <td>${formatTime(r.totalTime)}</td><td>${formatTime(r.bestLap)}</td>
       </tr>`,
       )
       .join("");
     const youPlace = rows.find((r) => r.isPlayer)?.place;
+    /* onda 8: quanto faltou para subir uma posição (gancho do "correr de novo") */
+    const youRow = rows.find((r) => r.isPlayer);
+    let chase = "";
+    if (youRow && Number.isFinite(youRow.totalTime)) {
+      const secs = (v: number) => v.toFixed(1).replace(".", ",");
+      if (youRow.place > 1) {
+        const ahead = rows.find((r) => r.place === youRow.place - 1);
+        if (ahead && Number.isFinite(ahead.totalTime)) {
+          const gap = Math.max(0, youRow.totalTime - ahead.totalTime);
+          const nudge = gap < 1.5 ? " Um turbo de derrapada a mais já resolve!" : gap < 4 ? " Freie antes das curvas e saia acelerando." : " Derrape nas curvas longas e use os itens.";
+          chase = `<p class="chase-line" role="status">Faltaram <b>${secs(gap)} s</b> para o P${ahead.place} (${ahead.name}).${nudge}</p>`;
+        }
+      } else {
+        const second = rows.find((r) => r.place === 2);
+        if (second && Number.isFinite(second.totalTime)) {
+          chase = `<p class="chase-line is-win" role="status">Vitória com <b>${secs(Math.max(0, second.totalTime - youRow.totalTime))} s</b> de vantagem sobre ${second.name}.</p>`;
+        }
+      }
+    }
     const meta = opts?.metaLine ? `<p class="daily-meta podium-meta" role="status">${opts.metaLine}${opts.newBest ? " · <b>recorde do dia!</b>" : ""}</p>` : "";
     this.set(`
       <section class="screen solid results-screen">
@@ -795,6 +818,7 @@ export class UI {
           <div class="eyebrow">Pódio · chegada</div>
           <h2>${youPlace === 1 ? "Bandeirada sua" : youPlace ? `Você chegou em P${youPlace}` : "Fim da prova"}</h2>
           <div class="podium" aria-label="Pódio">${podium}</div>
+          ${chase}
           ${meta}
           <table class="table results-table">
             <thead><tr><th>Pos</th><th>Piloto</th><th>Tempo</th><th>Melhor volta</th></tr></thead>
@@ -814,7 +838,7 @@ export class UI {
     const body = rows
       .map(
         (r, i) => `<tr class="${r.isPlayer ? "you" : ""}">
-        <td>${i + 1}º</td><td>${r.name}${r.isPlayer ? " (você)" : ""}</td>
+        <td>${i + 1}º</td><td>${r.name}${r.isPlayer && r.name !== "Você" ? " (você)" : ""}</td>
         <td>${r.points}</td><td>${r.wins}</td>
       </tr>`,
       )
