@@ -362,6 +362,11 @@ export class Game {
     this.syncChrome();
   }
 
+  /** onda 8: textos de toque só para quem joga no toque */
+  private touchUi(): boolean {
+    return isPhoneViewport() || wantsTouchControls();
+  }
+
   private syncChrome(): void {
     const racing = this.view === "race";
     const touch = racing && (isPhoneViewport() || wantsTouchControls());
@@ -548,7 +553,7 @@ export class Game {
         }
         setTimeout(() => this.ui.setCountdown(null), 780);
         // Onda 5: hook do primeiro minuto (sempre, curto)
-        this.ui.showCoach("Segure ACELERA · stick pra virar", 3800);
+        this.ui.showCoach(this.touchUi() ? "Segure ACELERA · stick pra virar" : "Segure ↑ · ← → pra virar", 3800);
         if (this.coachArmed) {
           this.coachStep = 1;
           this.coachTimer = 3.8;
@@ -606,7 +611,7 @@ export class Game {
     try {
       if (!localStorage.getItem(RACE_TIP_KEY)) {
         this.tipArmed = true;
-        this.ui.showRaceTip(58000);
+        this.ui.showRaceTip(58000, isPhoneViewport() || wantsTouchControls());
         // Mark seen on first show so it only appears once (even if they quit mid-tip).
         localStorage.setItem(RACE_TIP_KEY, "1");
       }
@@ -615,7 +620,7 @@ export class Game {
       }
     } catch {
       this.tipArmed = true;
-      this.ui.showRaceTip(58000);
+      this.ui.showRaceTip(58000, isPhoneViewport() || wantsTouchControls());
       this.coachArmed = true;
     }
     this.syncChrome();
@@ -751,11 +756,11 @@ export class Game {
         this.coachTimer = Math.max(0, this.coachTimer - dt);
         if (this.coachStep === 1 && this.coachTimer <= 0) {
           if (this.input.state.throttle > 0.35) {
-            this.ui.showCoach("Curva: DERRAPA + stick", 5200);
+            this.ui.showCoach(this.touchUi() ? "Curva: DERRAPA + stick" : "Curva: segure Shift + ← →", 5200);
             this.coachStep = 2;
             this.coachTimer = 5.2;
           } else {
-            this.ui.showCoach("Segure ACELERA pra andar", 2800);
+            this.ui.showCoach(this.touchUi() ? "Segure ACELERA pra andar" : "Segure ↑ (ou W) pra andar", 2800);
             this.coachTimer = 2.8;
           }
         } else if (this.coachStep === 2) {

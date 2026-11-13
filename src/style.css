@@ -2018,3 +2018,34 @@ body:not(.is-race) .brake-veil { display: none !important; }
 @media (max-width: 819px) {
   .time-delta { font-size: 0.85em; margin-left: 0.25rem; }
 }
+
+/* ===== Onda 8: velocímetro/item longe do stick; linha de perseguição no pódio ===== */
+body.touch-on.is-race .hud-bot {
+  bottom: calc(204px + var(--safe-b)) !important;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touch-on.is-race .hud-bot {
+    left: 50% !important;
+    transform: translateX(-50%);
+    top: max(8px, var(--safe-t));
+    bottom: auto !important;
+  }
+}
+.chase-line {
+  margin: 10px 0 4px; padding: 10px 14px; border-radius: 12px;
+  background: rgba(255, 200, 80, 0.10); border: 1px solid rgba(255, 200, 80, 0.35);
+  color: #f3e6c4; font-size: 14px; line-height: 1.35;
+}
+.chase-line b { color: #ffd166; }
+.chase-line.is-win { background: rgba(80, 220, 140, 0.10); border-color: rgba(80, 220, 140, 0.4); }
+
+/* Onda 8: dica e coach não se empilham; dica acima do velocímetro no toque */
+.race-tip { transition: opacity 0.2s ease; }
+body.coach-on .race-tip { opacity: 0; }
+body.touch-on.is-race .race-tip {
+  bottom: calc(304px + var(--safe-b));
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  body.touch-on.is-race .race-tip { bottom: calc(24px + var(--safe-b)); max-width: min(46vw, 420px); }
+  body.touch-on.is-race .coach-cue { top: calc(156px + var(--safe-t)) !important; }
+}
